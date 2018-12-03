@@ -4,5 +4,5 @@ install:
   - nuget restore SIMS.sln
   - nuget install NUnit.Runners -Version 3.11.0 -OutputDirectory testrunner
 script:
-  - xbuild /p:Configuration=Release SIMS.sln
+  - msbuild /p:Configuration=Release SIMS.sln
   - mono ./testrunner/NUnit.Runners.3.11.0/tools/nunit-console.exe ./SIMS/bin/Release/SIMS.exe
