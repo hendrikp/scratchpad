@@ -2,7 +2,6 @@ language: csharp
 solution: ./swt2/ccd/SIMS.sln
 install:
   - nuget restore ./swt2/ccd/SIMS.sln
-  - nuget install NUnit.Runners -Version 3.11.0 -OutputDirectory testrunner
-script:
+  - nuget install NUnit.Runners -Version 3.9.0 -OutputDirectory testing
   - msbuild /p:Configuration=Release ./swt2/ccd/SIMS.sln
-  - mono ./testrunner/NUnit.Runners.3.11.0/tools/nunit-console.exe ./swt2/ccd/SIMS/bin/Release/SIMS.exe
+  - mono ./testing/NUnit.Runners.3.9.0/tools/nunit-console.exe ./swt2/ccd/SIMS/bin/Release/SIMS.exe
