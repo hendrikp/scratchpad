@@ -5,5 +5,7 @@ install:
   - nuget install NUnit.Runners -Version 3.9.0 -OutputDirectory testing
 script:
   - msbuild /p:Configuration=Release ./swt2/ccd/SIMS.sln
-  - ls -laR
-  - mono ./testing/NUnit.Runners.3.9.0/tools/nunit-console.exe ./swt2/ccd/SIMS/bin/Release/SIMS.exe
+# debug environment/build result
+#  - ls -laR
+# run test
+  - mono  ./testing/NUnit.ConsoleRunner.3.9.0/tools/nunit3-console.exe ./swt2/ccd/SIMS/bin/Release/SIMS.exe
