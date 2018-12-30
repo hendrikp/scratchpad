@@ -1,23 +1,39 @@
 language: csharp
 solution: ./swt2/ccd/SIMS.sln
+
+###################################
+# install dependencies
 install:
   - nuget restore ./swt2/ccd/SIMS.sln
   - nuget install NUnit.Runners -Version 3.9.0 -OutputDirectory testing
+  - sudo apt-get install zip
+
+###################################
+# build and test
 script:
   - msbuild /p:Configuration=Release ./swt2/ccd/SIMS.sln
 # debug environment/build result
 #  - ls -laR
 # run test
   - mono  ./testing/NUnit.ConsoleRunner.3.9.0/tools/nunit3-console.exe ./swt2/ccd/SIMS/bin/Release/SIMS.exe
+
+###################################
+# package build
+after_script:
+  on:
+    tags: true
+  - zip -r "./swt2/ccd/SIMS/bin/$TRAVIS_TAG.zip" "./swt2/ccd/SIMS/bin/Release/SIMS.exe" "./swt2/ccd/SIMS/bin/Release/SIMS.exe.config"
+
+###################################
+# deploy build 
 deploy:
+  on:
+    tags: true
   provider: releases
   api_key: $github_releases_token
 # file_glob: true
 # file: ./swt2/ccd/SIMS/bin/Release/*
   file:
-    - "./swt2/ccd/SIMS/bin/Release/SIMS.exe"
-    - "./swt2/ccd/SIMS/bin/Release/SIMS.exe.config"
+    - "./swt2/ccd/SIMS/bin/$TRAVIS_TAG.zip"
   skip_cleanup: true
   overwrite: true
-  on:
-    tags: true
