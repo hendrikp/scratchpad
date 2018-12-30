@@ -9,3 +9,15 @@ script:
 #  - ls -laR
 # run test
   - mono  ./testing/NUnit.ConsoleRunner.3.9.0/tools/nunit3-console.exe ./swt2/ccd/SIMS/bin/Release/SIMS.exe
+deploy:
+  provider: releases
+  api_key: $github_releases_token
+# file_glob: true
+# file: ./swt2/ccd/SIMS/bin/Release/*
+  file:
+    - "./swt2/ccd/SIMS/bin/Release/SIMS.exe"
+    - "./swt2/ccd/SIMS/bin/Release/SIMS.exe.config"
+  skip_cleanup: true
+  overwrite: true
+  on:
+    tags: true
