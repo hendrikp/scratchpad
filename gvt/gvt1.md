@@ -1,6 +1,6 @@
 # GVT Task 1
 
-## Rotating Disc:
+## Rotating Disc
 
 <style>
     .spiral {
@@ -28,7 +28,7 @@ Keybinds:
 Source material:
 * Selfcreated, with scripted action to duplicate, move, rotate layer. (Additionally applied bevel and glow filter ontop all - after rotation)
 
-## Animated spritesheet (Extension):
+## Animated spritesheet (Extension)
 <style>
     .butterfly {
       display: inline-block;
