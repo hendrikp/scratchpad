@@ -2,14 +2,13 @@
 
 ## Rotating Disc:
 
-
 <style>
     .spiral {
       display: inline-block;
       width: 256px;
       height: 256px;
       background-image : url(spiral.png);
-      animation: moveSpiralX 0.1s steps(12) infinite,
+      animation: moveSpiralX 0.1s steps(12) infinite;
     }
     @keyframes moveSpiralX {
       from{background-position-x:0px;}
