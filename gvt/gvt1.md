@@ -7,7 +7,6 @@
       display: inline-block;
       width: 256px;
       height: 256px;
-      background-image : url(spiral.png);
     }
     .spiral_auto {
       animation: moveSpiralX 0.4s steps(12) infinite;
@@ -18,7 +17,19 @@
     }
 </style>
 
-<div id="spiral1" class="spiral spiral_auto"></div>
+<script>
+// As requested in task load image indirectly, via javascript
+function loadImage(id, filename) {
+    var imageObj = new Image();
+    imageObj.onload = function() {
+        var img = document.getElementById(id);
+        img.setAttribute("style", "background-image: url(" + filename + ");");
+    };
+    imageObj.src = filename;
+}
+</script>
+
+<div id="spiral1" class="spiral" onload="loadImage('spiral1', 'spiral.png')"></div>
 
 Keybinds:
 * `L` - Rotate disc left one frame
