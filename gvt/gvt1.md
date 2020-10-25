@@ -1,6 +1,7 @@
 
 
 Rotating Disc:
+--------------
 TODO
 
 Keybinds:
@@ -8,7 +9,11 @@ Keybinds:
 * `R` - Rotate disc right one frame
 * `A` - Rotate disc automatically (Extension)
 
+Source material:
+* [Rotating Disc](https://opengameart.org/content/sweet-colorful-candies-free-game-assest) (Modified: Added spritesheet animation)
+
 Animated spritesheet (Extension):
+---------------------------------
 <style>
     .butterfly {
       display: inline-block;
@@ -31,5 +36,4 @@ Animated spritesheet (Extension):
 <div class="butterfly"/>
 
 Source material:
-* [Rotating Disc](https://opengameart.org/content/sweet-colorful-candies-free-game-assest) (Modified: Added spritesheet animation)
 * [Butterfly Spritesheet](https://opengameart.org/content/butterfly-animation) (Modified: Fixed Spritesheet animation grid/alignment)
