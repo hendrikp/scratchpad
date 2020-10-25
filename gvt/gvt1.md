@@ -51,7 +51,7 @@ function toggleSpiralAutoRotate()
   {
     if (img.classList.contains(rotateClass))
     {
-        img.classList.add(rotateClass);
+        img.classList.remove(rotateClass);
     }
   }
  
