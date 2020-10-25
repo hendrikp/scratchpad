@@ -41,6 +41,7 @@ function toggleSpiralAutoRotate()
   var rotateClass = "spiral_auto";
   
   var img = document.getElementById("spiral1");
+  img.style.removeProperty("background-position-x"); // Reset frame-based animation
   
   // add/remove css class for autorotation
   if (autoRotate)
@@ -58,6 +59,33 @@ function toggleSpiralAutoRotate()
   _stateAutoRotate = autoRotate;
 }
 
+// Handle frame based animation
+var _animationFrame = 0;
+function spiralAnimate(frameDelta)
+{
+    if (!_stateAutoRotate)
+    {
+        _animationFrame += frameDelta;
+
+        // this potentially supports angle based rotation, with more then one frame delta too
+        while (_animationFrame < 0)
+        {
+            _animationFrame += 12;
+        }
+
+        while (_animationFrame >= 12)
+        {
+            _animationFrame -= 12;
+        }
+
+        var xPos = _animationFrame * -256;
+
+        // Frame wise animation by moving offset
+        var img = document.getElementById("spiral1");
+        img.style.setProperty("background-position-x", xPos + "px");
+    }
+}
+
 // Key handler
 window.onkeydown = function(evt)
 {
@@ -67,6 +95,14 @@ window.onkeydown = function(evt)
     if (c == 'A')
     {
         toggleSpiralAutoRotate();
+    }
+    else if(c == 'R')
+    {
+        spiralAnimate(1);
+    }
+    else if(c == 'L')
+    {
+        spiralAnimate(-1);
     }
 };
 
