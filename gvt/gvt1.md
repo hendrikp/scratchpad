@@ -75,9 +75,9 @@ window.onkeydown = function(evt)
 <div id="spiral1" class="spiral"></div>
 
 Keybinds:
-* `L` - Rotate disc left one frame
-* `R` - Rotate disc right one frame
-* `A` - Rotate disc automatically (Extension)
+* `L` - Rotate disc left one frame (if not autorotating)
+* `R` - Rotate disc right one frame (if not autorotating)
+* `A` - Toggle rotate disc automatically (Extension)
 
 Source material:
 * Selfcreated, with scripted action to duplicate, move, rotate layer. (Additionally applied bevel and glow filter ontop all - after rotation)
