@@ -1,7 +1,7 @@
+# GVT Task 1
 
+## Rotating Disc:
 
-Rotating Disc:
---------------
 TODO
 
 Keybinds:
@@ -12,8 +12,7 @@ Keybinds:
 Source material:
 * [Rotating Disc](https://opengameart.org/content/sweet-colorful-candies-free-game-assest) (Modified: Added spritesheet animation)
 
-Animated spritesheet (Extension):
----------------------------------
+## Animated spritesheet (Extension):
 <style>
     .butterfly {
       display: inline-block;
