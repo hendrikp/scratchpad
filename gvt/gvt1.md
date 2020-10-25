@@ -8,7 +8,9 @@
       width: 256px;
       height: 256px;
       background-image : url(spiral.png);
-      animation: moveSpiralX 0.1s steps(12) infinite;
+    }
+    .spiral_auto {
+      animation: moveSpiralX 0.4s steps(12) infinite;
     }
     @keyframes moveSpiralX {
       from{background-position-x:0px;}
@@ -16,7 +18,7 @@
     }
 </style>
 
-<div class="spiral"></div>
+<div id="spiral1" class="spiral spiral_auto"></div>
 
 Keybinds:
 * `L` - Rotate disc left one frame
