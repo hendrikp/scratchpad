@@ -19,9 +19,11 @@
 
 <script>
 // As requested in task load image indirectly, via javascript
-function loadImage(id, filename) {
+function loadImage(id, filename)
+{
     var imageObj = new Image();
-    imageObj.onload = function() {
+    imageObj.onload = function()
+    {
         var img = document.getElementById(id);
         img.setAttribute("style", "background-image: url(" + filename + ");");
     };
@@ -30,6 +32,44 @@ function loadImage(id, filename) {
 
 // Load image once window loaded
 window.onload = function() { loadImage('spiral1', 'spiral.png'); };
+
+// Handle autorotate (Extension)
+var _stateAutoRotate = false;
+function toggleSpiralAutoRotate()
+{
+  var autoRotate = !_stateAutoRotate;
+  var rotateClass = "spiral_auto";
+  
+  var img = document.getElementById("spiral1");
+  
+  // add/remove css class for autorotation
+  if (autoRotate)
+  {
+    img.classList.add(rotateClass);
+  }
+  else
+  {
+    if (img.classList.contains(rotateClass)
+    {
+        img.classList.add(rotateClass);
+    }
+  }
+ 
+  _stateAutoRotate = autoRotate;
+}
+
+// Key handler
+window.onkeydown = function(evt)
+{
+    var key = evt.which ? evt.which : evt.keyCode;
+    var c = String.fromCharCode(key);
+    
+    if (c == 'A')
+    {
+        toggleSpiralAutoRotate();
+    }
+};
+
 </script>
 
 <div id="spiral1" class="spiral"></div>
