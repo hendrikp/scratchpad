@@ -8,11 +8,11 @@
     }
     @keyframes moveButterflyX {
       from{background-position-x:0px;}
-      to{background-position-x:-768px;}
+      to{background-position-x:-1024px;}
     }
     @keyframes moveButterflyY {
       from{background-position-y:0px;}
-      to{background-position-y:-768px;}
+      to{background-position-y:-1024px;}
     }
 </style>
 
