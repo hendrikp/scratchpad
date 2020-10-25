@@ -1,5 +1,6 @@
 <style>
     .butterfly {
+      display: inline-block;
       width: 256px;
       height: 256px;
       background-image : url(butterfly.png);
