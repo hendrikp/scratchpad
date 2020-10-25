@@ -1,3 +1,14 @@
+
+
+Rotating Disc:
+TODO
+
+Keybinds:
+* `L` - Rotate disc left one frame
+* `R` - Rotate disc right one frame
+* `A` - Rotate disc automatically (Extension)
+
+Animated spritesheet (Extension):
 <style>
     .butterfly {
       display: inline-block;
@@ -17,17 +28,8 @@
     }
 </style>
 
-Rotating Disc:
-TODO
-
-Keybinds:
-* `L` - Rotate disc left one frame
-* `R` - Rotate disc right one frame
-* `A` - Rotate disc automatically
-
-Animated spritesheet:
 <div class="butterfly"/>
 
 Source material:
-* [Rotating Disc](https://opengameart.org/content/sweet-colorful-candies-free-game-assest) (Modified)
-* [Butterfly Spritesheet](https://opengameart.org/content/butterfly-animation)
+* [Rotating Disc](https://opengameart.org/content/sweet-colorful-candies-free-game-assest) (Modified: Added spritesheet animation)
+* [Butterfly Spritesheet](https://opengameart.org/content/butterfly-animation) (Modified: Fixed Spritesheet animation grid/alignment)
