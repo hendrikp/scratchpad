@@ -27,9 +27,12 @@ function loadImage(id, filename) {
     };
     imageObj.src = filename;
 }
+
+// Load image once window loaded
+window.onload = function() { loadImage('spiral1', 'spiral.png'); };
 </script>
 
-<div id="spiral1" class="spiral" onload="loadImage('spiral1', 'spiral.png')"></div>
+<div id="spiral1" class="spiral"></div>
 
 Keybinds:
 * `L` - Rotate disc left one frame
