@@ -33,7 +33,7 @@ Animated spritesheet (Extension):
     }
 </style>
 
-<div class="butterfly" />
+<div class="butterfly"></div>
 
 Source material:
 * [Butterfly Spritesheet](https://opengameart.org/content/butterfly-animation) (Modified: Fixed Spritesheet animation grid/alignment)
