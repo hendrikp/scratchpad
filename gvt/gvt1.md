@@ -1,6 +1,5 @@
 # GVT Task 1
-Sourcecode for Task 1:
-https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt1.md
+[Sourcecode for Task 1](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt1.md)
 
 ## Rotating Disc
 
