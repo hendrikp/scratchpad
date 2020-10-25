@@ -1,4 +1,4 @@
 ## Samples / Scraps / Projects
 Various samples of stuff tested & tried.
 
-* [GVT1](GVT-1)
+* [GVT1](gvt/gvt1)
