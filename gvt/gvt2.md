@@ -79,23 +79,24 @@ function initContext(id)
     
     // prepare pos attribute of vertex shader (2D vertex positions)
     var posAttribute = gl.getAttribLocation(program, "pos");
-    gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
+
+    // prepare data
+    var positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    var positions =
+    [
+      0, 0,
+      0, 0.5,
+      0.7, 0,
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
     // method to draw
     function performTask()
     {
-      var positionBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-      var positions =
-      [
-        0, 0,
-        0, 0.5,
-        0.7, 0,
-      ];
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-      
       gl.enableVertexAttribArray(posAttribute);
+      gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINE_STRIP, 0, positions.length / 2);
     }
     
