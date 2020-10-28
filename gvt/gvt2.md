@@ -73,6 +73,28 @@ function initProgram(gl)
   }
 }
 
+// generate data
+function generateSpiral()
+{
+  var positions = [];
+  
+  // generate data (spiral)
+  var a = 0.02; // space offset
+  var b = 0.025; // space angle factor
+  var angleScale = 0.3; // angle scale per point
+  var rotations = 5; // 5 rotations
+
+  var points = (rotations * 2 * Math.PI) / angleScale;
+  for (var i = 0; i < points; ++i)
+  {
+    var angle = i * angleScale;
+    var d = (a + b * angle);
+    positions.push( d * Math.cos(angle), d * Math.sin(angle) );
+  }
+  
+  return positions;
+}
+
 // init context
 function initContext(id)
 {
@@ -100,20 +122,8 @@ function initContext(id)
     var positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     
-    var positions = [ ]; // start
-    
-    // generate data (spiral)
-    var a = 0.02; // space offset
-    var b = 0.025; // space angle factor
-    var angleScale = 0.3; // angle scale per point
-    var rotations = 5; // 5 rotations
-    var points = (rotations * 2 * Math.PI) / angleScale;
-    for (var i = 0; i < points; ++i)
-    {
-        var angle = i * angleScale;
-        var d = (a + b * angle);
-        positions.push( d * Math.cos(angle), d * Math.sin(angle) );
-    }
+    // start
+    var positions = generateSpiral();
 
     // store data
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
