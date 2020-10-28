@@ -77,6 +77,10 @@ function initContext(id)
 {
   var _canvas = document.getElementById(id);
   var gl = _canvas.getContext("webgl");
+  
+  // multisampling so it looks smoother
+  gl.enable(gl.SAMPLE_COVERAGE);
+  gl.sampleCoverage(0.5, false);
 
   if (gl)
   {
@@ -102,8 +106,8 @@ function initContext(id)
     var positions = [ ]; // start
     
     // generate data (spiral)
-    var a = 0.01; // space offset
-    var b = 0.01; // space angle factor
+    var a = 0.02; // space offset
+    var b = 0.02; // space angle factor
     var c = 0.2; // angle scale per point
     var rotations = 5; // 5 rotations
     var points = (rotations * 2 * Math.PI) / c;
