@@ -106,7 +106,7 @@ function initContext(id)
     var b = 0.15; // space angle factor
     var c = 0.2; // angle scale per point
     var rotations = 5; // 5 rotations
-    var points = (rotations * 2 * Math.Pi) / c;
+    var points = (rotations * 2 * Math.PI) / c;
     for (var i = 0; i < points; ++i)
     {
         var angle = c * i;
