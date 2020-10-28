@@ -80,7 +80,7 @@ function generateSpiral()
   
   // generate data (spiral)
   var a = 0.01; // space offset
-  var b = 0.035; // space angle factor
+  var b = 0.015; // space angle factor
   var angleScale = 0.1; // angle scale per point
   var rotations = 5; // 5 rotations
 
@@ -88,7 +88,9 @@ function generateSpiral()
   for (var i = 0; i < points; ++i)
   {
     var angle = i * angleScale;
-    var d = (a + b * angle);
+    var rotation = angle / (2*Math.PI);
+    
+    var d = (a + b * angle) * rotation;
     positions.push( d * Math.cos(angle), d * Math.sin(angle) );
   }
   
