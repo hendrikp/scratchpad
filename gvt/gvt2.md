@@ -100,11 +100,10 @@ function initContext(id)
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     var positions =
     [
+      -1, -1,
       0, 0,
-      0, 0.5,
-      0.7, 0,
+      0, 1,
       1, 1,
-      0, 0,
     ];
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
