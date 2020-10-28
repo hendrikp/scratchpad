@@ -99,17 +99,19 @@ function initContext(id)
     var positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     
-    var positions = [ 0, 0, ]; // start
+    var positions = [ ]; // start
     
     // generate data (spiral)
-    var a = 1;
-    var b = 2;
-    var points = 31;
+    var a = 0.1; // space offset
+    var b = 0.15; // space angle factor
+    var c = 0.2; // angle scale per point
+    var rotations = 5; // 5 rotations
+    var points = (rotations * 2 * Math.Pi) / c;
     for (var i = 0; i < points; ++i)
     {
-        var angle = 0.1 * i;
-        var c = (a + b * angle);
-        positions.push( c * cos(angle), c * sin(angle) );
+        var angle = c * i;
+        var d = (a + b * angle);
+        positions.push( d * Math.cos(angle), d * Math.sin(angle) );
     }
 
     // store data
