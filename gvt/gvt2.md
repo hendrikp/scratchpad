@@ -64,7 +64,7 @@ function initContext()
 {
   var canvas = document.getElementById("wgl");
   var gl = canvas.getContext("webgl");
-  if (!gl)
+  if (gl)
   {
     var vs = getShader(gl, gl.FRAGMENT_SHADER, "wgl_vertex");
     var fs = getShader(gl, gl.FRAGMENT_SHADER, "wgl_fragment");
@@ -80,9 +80,9 @@ function initContext()
     var posAttribute = gl.getAttribLocation(program, "pos");
     gl.enableVertexAttribArray(posAttribute);
     gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
+    
+    return gl;
   }
-  
-  return gl;
 }
 
 function performTask(gl)
