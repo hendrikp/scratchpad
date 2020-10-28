@@ -90,7 +90,7 @@ function generateSpiral()
     var angle = i * angleScale;
     var rotation = angle / pi2;
     
-    var radius = (a + b * rotation);
+    var radius = a + b * rotation * rotation;
     positions.push( radius * Math.cos(angle), radius * Math.sin(angle) );
   }
   
