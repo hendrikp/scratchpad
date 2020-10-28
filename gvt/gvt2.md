@@ -88,7 +88,7 @@ function initContext(id)
     
     // prepare canvas
     gl.useProgram(program);
-    gl.clearColor(1, 1, 1, 0); // white
+    gl.clearColor(1, 1, 1, 1); // white
     gl.clear(gl.COLOR_BUFFER_BIT);
     resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
