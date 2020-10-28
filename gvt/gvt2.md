@@ -15,7 +15,7 @@ void main()
 <script id="wgl_fragment" type="nojs">
 void main()
 {
-  gl_FragColor = vec4(1, 1, 1, 1); // black
+  gl_FragColor = vec4(0, 0, 0, 1); // black
   //gl_FragColor = vec4(0.22, 1, 0.07, 1); // neon
 }
 </script>
