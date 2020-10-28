@@ -1,5 +1,5 @@
 # GVT Task 2
-[Sourcecode for Task 1](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt2.md)
+[Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt2.md)
 
 ## WebGL Lines
 <canvas id="wgl" width="512" height="512"></canvas>
