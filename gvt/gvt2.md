@@ -66,14 +66,14 @@ function initContext()
   var gl = canvas.getContext("webgl");
   if (gl)
   {
-    var vs = getShader(gl, gl.FRAGMENT_SHADER, "wgl_vertex");
+    var vs = getShader(gl, gl.VERTEX_SHADER, "wgl_vertex");
     var fs = getShader(gl, gl.FRAGMENT_SHADER, "wgl_fragment");
     
     var program = initProgram(gl);
     
     // prepare canvas
     gl.useProgram(program);
-    gl.clearColor(0, 0, 0, 0);
+    gl.clearColor(1, 1, 1, 0); // white
     gl.clear(gl.COLOR_BUFFER_BIT);
     
     // prepare pos attribute of vertex shader (2D vertex positions)
