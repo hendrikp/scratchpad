@@ -76,7 +76,9 @@ function initContext(id)
     gl.useProgram(program);
     gl.clearColor(1, 1, 1, 0); // white
     gl.clear(gl.COLOR_BUFFER_BIT);
-    
+    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  
     // prepare pos attribute of vertex shader (2D vertex positions)
     var posAttribute = gl.getAttribLocation(program, "pos");
 
