@@ -86,7 +86,6 @@ function initContext(id)
     {
       var positionBuffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-      gl.enableVertexAttribArray(posAttribute);
 
       var positions =
       [
@@ -95,7 +94,8 @@ function initContext(id)
         0.7, 0,
       ];
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
+      
+      gl.enableVertexAttribArray(posAttribute);
       gl.drawArrays(gl.LINE_STRIP, 0, positions.length / 2);
     }
     
