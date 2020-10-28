@@ -109,7 +109,7 @@ function initContext(id)
     var points = (rotations * 2 * Math.PI) / angleScale;
     for (var i = 0; i < points; ++i)
     {
-        var angle = c * i;
+        var angle = i * angleScale;
         var d = (a + b * angle);
         positions.push( d * Math.cos(angle), d * Math.sin(angle) );
     }
