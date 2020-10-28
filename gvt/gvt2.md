@@ -60,10 +60,11 @@ function initProgram(gl)
 }
 
 // init context
-function initContext()
+function initContext(id)
 {
-  var canvas = document.getElementById("wgl");
-  var gl = canvas.getContext("webgl");
+  var _canvas = document.getElementById(id);
+  var gl = _canvas.getContext("webgl");
+
   if (gl)
   {
     var vs = getShader(gl, gl.VERTEX_SHADER, "wgl_vertex");
@@ -78,28 +79,29 @@ function initContext()
     
     // prepare pos attribute of vertex shader (2D vertex positions)
     var posAttribute = gl.getAttribLocation(program, "pos");
-    gl.enableVertexAttribArray(posAttribute);
     gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
+
+    // method to draw
+    function performTask()
+    {
+      var positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.enableVertexAttribArray(posAttribute);
+
+      var positions =
+      [
+        0, 0,
+        0, 0.5,
+        0.7, 0,
+      ];
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+      gl.drawArrays(gl.LINE_STRIP, 0, positions.length / 2);
+    }
     
-    return gl;
+    return { performTask: performTask };
   }
 }
 
-function performTask(gl)
-{
-  var positionBuffer = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-  var positions =
-  [
-    0, 0,
-    0, 0.5,
-    0.7, 0,
-  ];
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  gl.drawArrays(gl.LINE_STRIP, 0, positions.length / 2);
-}
-
-var gl = initContext();
-performTask(gl);
+initContext("wgl").performTask(gl);
 </script>
