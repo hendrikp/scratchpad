@@ -102,8 +102,8 @@ function initContext(id)
     var positions = [ ]; // start
     
     // generate data (spiral)
-    var a = 0.1; // space offset
-    var b = 0.15; // space angle factor
+    var a = 0.01; // space offset
+    var b = 0.01; // space angle factor
     var c = 0.2; // angle scale per point
     var rotations = 5; // 5 rotations
     var points = (rotations * 2 * Math.PI) / c;
