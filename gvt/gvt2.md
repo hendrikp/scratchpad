@@ -76,12 +76,8 @@ function initProgram(gl)
 function initContext(id)
 {
   var _canvas = document.getElementById(id);
-  var gl = _canvas.getContext("webgl");
+  var gl = _canvas.getContext("webgl", {antialias: true});
   
-  // multisampling so it looks smoother
-  gl.enable(gl.SAMPLE_COVERAGE);
-  gl.sampleCoverage(0.5, false);
-
   if (gl)
   {
     var vs = getShader(gl, gl.VERTEX_SHADER, "wgl_vertex");
