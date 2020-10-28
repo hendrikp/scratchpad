@@ -103,5 +103,5 @@ function initContext(id)
   }
 }
 
-initContext("wgl").performTask(gl);
+initContext("wgl").performTask();
 </script>
