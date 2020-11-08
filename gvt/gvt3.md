@@ -127,11 +127,12 @@ function generateSpiral()
     
     var gradientHue = (i % (pointsPerRotation+1)) / pointsPerRotation;
     var gradientValue = i / pointsTotal;
-    var saturation = (Math.floor(rotation) % 2) == 0 ? 0.1 : 0.9;
+    var saturation = 0.9;
+    var alpha = (Math.floor(rotation) % 2) == 0 ? 0.1 : 1.0;
     
     // hsv based gradient
     var c = hsv2rgb(gradientHue, saturation, gradientValue);
-    colors.push(c[0], c[1], c[2], 1);
+    colors.push(c[0], c[1], c[2], alpha);
     
     // still generate triangles?
     if (i < origins)
