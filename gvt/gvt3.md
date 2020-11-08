@@ -7,7 +7,7 @@
 <script id="wgl_vertex" type="nojs">
 attribute vec4 pos;
 attribute vec4 col;
-varying vec4 cColor;
+varying vec4 vColor;
 void main()
 {
   vColor = col;
