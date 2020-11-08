@@ -119,7 +119,7 @@ function generateSpiral()
     var radius = a + b * rotation * rotation;
     positions.push( radius * Math.cos(angle), radius * Math.sin(angle) );
     
-    var gradientHue = i / points;
+    var gradientHue = i / pointsTotal;
     
     // hsv based gradient
     var c = hsv2rgb(gradientHue, 0.5, 0.5);
