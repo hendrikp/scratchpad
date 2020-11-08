@@ -181,7 +181,7 @@ function initContext(id)
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
       gl.enableVertexAttribArray(posAttribute);
       gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
-      gl.drawArrays(gl.LINE_STRIP, 0, positions.length / 2);
+      gl.drawArrays(gl.LINE_STRIP, 0, shape.p.length / 2);
     }
     
     return { performTask: performTask };
