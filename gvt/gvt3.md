@@ -117,7 +117,7 @@ function generateSpiral()
   var pointsTotal = Math.ceil( rotations * pointsPerRotation );
   var origins = pointsTotal - pointsPerRotation; // one less rotation
   var pointsPerRotation2 = 2*pointsPerRotation;
-  var fadeOut = 0.5*pointsPerRotation;
+  var fadeOut = 0.75*pointsPerRotation;
   
   for (var i = 0; i < pointsTotal; ++i)
   {
@@ -136,6 +136,12 @@ function generateSpiral()
     if (nearEnd < 0)
     {
       alpha += nearEnd/fadeOut;
+    }
+    
+    var nearStart = i - fadeOut
+    if (nearStart < 0)
+    {
+      alpha += nearStart/fadeOut;
     }
     
     // hsv based gradient
