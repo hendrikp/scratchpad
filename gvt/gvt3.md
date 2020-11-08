@@ -16,6 +16,7 @@ void main()
 </script>
 
 <script id="wgl_fragment" type="nojs">
+precision mediump float;
 varying vec4 vColor;
 void main()
 {
