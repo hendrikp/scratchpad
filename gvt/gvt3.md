@@ -6,16 +6,21 @@
 
 <script id="wgl_vertex" type="nojs">
 attribute vec4 pos;
+attribute vec4 col;
+varying vec4 cColor;
 void main()
 {
+  vColor = col;
   gl_Position = pos;
 }
 </script>
 
 <script id="wgl_fragment" type="nojs">
+varying vec4 vColor;
 void main()
 {
-  gl_FragColor = vec4(0, 0, 0, 1); // black
+  gl_FragColor = vColor;
+  //gl_FragColor = vec4(0, 0, 0, 1); // black
   //gl_FragColor = vec4(0.22, 1, 0.07, 1); // neon
 }
 </script>
@@ -162,26 +167,55 @@ function initContext(id)
     resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   
-    // prepare pos attribute of vertex shader (2D vertex positions)
+    // prepare attributes of shaders
     var posAttribute = gl.getAttribLocation(program, "pos");
+    var colAttribute = gl.getAttribLocation(program, "col");
 
-    // prepare data
-    var positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    
-    // start
+    // generate data
     var shape = generateSpiral();
-
-    // store data
+    
+    // store vertices
+    var pBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.v), gl.STATIC_DRAW);
+    
+    // store indices
+    var iBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Float32Array(shape.i), gl.STATIC_DRAW);
+    
+    // store colors
+    var cBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.c), gl.STATIC_DRAW);
 
-    // method to draw
-    function performTask()
+    // method to draw (task 2)
+    function drawLineStrip()
     {
-      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
       gl.enableVertexAttribArray(posAttribute);
       gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
       gl.drawArrays(gl.LINE_STRIP, 0, shape.v.length / 2);
+    }
+    
+    // method to draw (task 3)
+    function performTask()
+    {
+      // vertices
+      gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
+      gl.enableVertexAttribArray(posAttribute);
+      gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
+      
+      // colors
+      gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
+      gl.enableVertexAttribArray(colAttribute);
+      gl.vertexAttribPointer(colAttribute, 4, gl.FLOAT, false, 0, 0);
+      
+      // indices
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
+      
+      // draw triangles based on indices
+      gl.drawElements(gl.TRIANGLES, shape.i.length, gl.UNSIGNED_SHORT, 0);
     }
     
     return { performTask: performTask };
