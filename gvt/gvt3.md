@@ -134,6 +134,12 @@ function generateSpiral()
     // still generate triangles?
     if (i < origins)
     {
+      // fully filled
+      indices.push( i, i+pointsPerRotation, i+1);
+      indices.push( i, i+pointsPerRotation-1, i+pointsPerRotation);
+
+      // or checkered
+      /*
       if (i % 2 == 0) // even (two point this rotation)
       {
         indices.push( i, i+pointsPerRotation, i+1);
@@ -142,6 +148,7 @@ function generateSpiral()
       {
         indices.push( i, i+pointsPerRotation-1, i+pointsPerRotation);
       }
+      */
     }
   }
   
