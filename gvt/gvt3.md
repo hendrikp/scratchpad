@@ -128,7 +128,7 @@ function generateSpiral()
     // still generate triangles?
     if (i < origins)
     {
-      if (i % 1 == 0) // even (two point this rotation)
+      if (i % 2 == 0) // even (two point this rotation)
       {
         indices.push( i, i+pointsPerRotation, i+1);
       }
