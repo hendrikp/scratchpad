@@ -183,7 +183,7 @@ function initContext(id)
     // store indices
     var iBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Float32Array(shape.i), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(shape.i), gl.STATIC_DRAW);
     
     // store colors
     var cBuffer = gl.createBuffer();
