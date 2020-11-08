@@ -173,7 +173,7 @@ function initContext(id)
     var shape = generateSpiral();
 
     // store data
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.p), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.v), gl.STATIC_DRAW);
 
     // method to draw
     function performTask()
@@ -181,7 +181,7 @@ function initContext(id)
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
       gl.enableVertexAttribArray(posAttribute);
       gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
-      gl.drawArrays(gl.LINE_STRIP, 0, shape.p.length / 2);
+      gl.drawArrays(gl.LINE_STRIP, 0, shape.v.length / 2);
     }
     
     return { performTask: performTask };
