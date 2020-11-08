@@ -129,7 +129,7 @@ function generateSpiral()
     
     // hsv based gradient
     var c = hsv2rgb(gradientHue, 0.5, 0.5);
-    colors.push(c[0], c[1], c[2]);
+    colors.push(c[0], c[1], c[2], 1);
     
     // still generate triangles?
     if (i < origins)
