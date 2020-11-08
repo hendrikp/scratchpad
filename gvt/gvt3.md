@@ -131,6 +131,13 @@ function generateSpiral()
     var saturation = 1- (i / pointsTotal);
     var alpha = 1.0;//-((i % (pointsPerRotation2+1)) / pointsPerRotation2);
     
+    var fadeOut = pointsPerRotation;
+    var nearEnd = pointsTotal - i - fadeOut;
+    if (nearEnd < 0)
+    {
+      alpha = 1+nearEnd/fadeOut;
+    }
+    
     // hsv based gradient
     var c = hsv2rgb(gradientHue, saturation, gradientValue);
     colors.push(c[0], c[1], c[2], alpha);
