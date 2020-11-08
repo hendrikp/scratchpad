@@ -12,10 +12,11 @@
 attribute vec4 pos;
 attribute vec4 col;
 varying vec4 vColor;
+uniform mat4 modelviewProjection;
 void main()
 {
   vColor = col;
-  gl_Position = pos;
+  gl_Position = modelviewProjection * pos;
 }
 </script>
 
@@ -129,7 +130,7 @@ function generateSpiral()
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { v: positions, i: indices, c: colors, ui: ui };
+  var shape = { v: positions, i: indices, c: colors, ui: ui, modelview: glMatrix.mat4.create() };
 
   // generate data (spiral)
   var a = 0.003; // space offset
@@ -150,7 +151,7 @@ function generateSpiral()
     var rotation = angle / pi2;
     
     var radius = a + b * rotation * rotation;
-    positions.push( radius * Math.cos(angle), radius * Math.sin(angle) );
+    positions.push( radius * Math.cos(angle), radius * Math.sin(angle), 0 );
     
     var gradientHue = (i % (pointsPerRotation+1)) / pointsPerRotation;
     var saturation = i / pointsTotal;
@@ -190,68 +191,115 @@ function initContext(id)
   var _canvas = document.getElementById(id);
   var gl = _canvas.getContext("webgl", {antialias: true});
 
+  function cleanBg()
+  {
+      gl.clearColor(1, 1, 1, 1); // white
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  }
+
+  var projection = glMatrix.mat4.create();  // projection matrix
+  var modelviewProjection = glMatrix.mat4.create();  // combined matrix
+
   if (gl)
   {
     var vs = getShader(gl, gl.VERTEX_SHADER, "wgl_vertex");
     var fs = getShader(gl, gl.FRAGMENT_SHADER, "wgl_fragment");
     
+    var context = {gl: gl, vs: vs, fs: fs};
+
     var program = initProgram(gl);
-    
+    context.program = program;
+
     // prepare canvas
     gl.useProgram(program);
-    gl.clearColor(1, 1, 1, 1); // white
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // clean + enable depth / features
+    cleanBg();
     gl.enable(gl.DEPTH_TEST);
+
+    // prepare viewport
     resizeCanvasToDisplaySize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   
     // prepare attributes of shaders
     var posAttribute = gl.getAttribLocation(program, "pos");
+    context.posAttribute = posAttribute;
     var colAttribute = gl.getAttribLocation(program, "col");
+    context.colAttribute = colAttribute;
+    var u_modelviewProjection = gl.getUniformLocation(program, "modelviewProjection");
+    context.modelviewProjection = u_modelviewProjection;
 
-    // generate data
-    var shape = generateSpiral();
-    
-    // store vertices
-    var pBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.v), gl.STATIC_DRAW);
-    
-    // store indices
-    var iBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(shape.i), gl.STATIC_DRAW);
-    
-    // store colors
-    var cBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.c), gl.STATIC_DRAW);
-
-    // method to draw (task 2)
-    function drawSpiralLineStrip()
+    // creation of buffers
+    function createBuffers(shape)
     {
-      gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
-      gl.enableVertexAttribArray(posAttribute);
-      gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
+      // store vertices
+      if (shape.c)
+      {
+        shape.pBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.pBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.v), gl.STATIC_DRAW);
+      }
+
+      // store indices
+      if (shape.c)
+      {
+        shape.iBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.iBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(shape.i), gl.STATIC_DRAW);
+      }
+
+      // store colors
+      if (shape.c)
+      {
+        shape.cBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.cBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.c), gl.STATIC_DRAW);
+      }
+    }
+
+    // method to draw line strip
+    function drawArrays(shape)
+    {
+      if (shape.pBuffer)
+      {
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.pBuffer);
+        gl.enableVertexAttribArray(posAttribute);
+        gl.vertexAttribPointer(posAttribute, 3, gl.FLOAT, false, 0, 0);
+      }
+
       gl.drawArrays(gl.LINE_STRIP, 0, shape.v.length / 2);
     }
-    
-    // method to draw (task 3)
-    function drawSpiral()
+
+    // method to draw
+    function drawElements(shape)
     {
       // vertices
-      gl.bindBuffer(gl.ARRAY_BUFFER, pBuffer);
-      gl.enableVertexAttribArray(posAttribute);
-      gl.vertexAttribPointer(posAttribute, 2, gl.FLOAT, false, 0, 0);
-      
-      // colors
-      gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-      gl.enableVertexAttribArray(colAttribute);
-      gl.vertexAttribPointer(colAttribute, 4, gl.FLOAT, false, 0, 0);
-      
-      // indices
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuffer);
+      if (shape.pBuffer)
+      {
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.pBuffer);
+        gl.enableVertexAttribArray(posAttribute);
+        gl.vertexAttribPointer(posAttribute, 3, gl.FLOAT, false, 0, 0);
+      }
 
+      // colors
+      if (shape.cBuffer)
+      {
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.cBuffer);
+        gl.enableVertexAttribArray(colAttribute);
+        gl.vertexAttribPointer(colAttribute, 4, gl.FLOAT, false, 0, 0);
+      }
+
+      // indices
+      if (shape.iBuffer)
+      {
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.iBuffer);
+      }
+
+      // position
+      glMatrix.mat4.multiply( modelviewProjection, projection, shape.modelview );
+      gl.uniformMatrix4fv(u_modelviewProjection, false, modelviewProjection );
+
+      // ui options for drawing
       if (shape.ui.drawLines == true)
       {
         // draw lines
@@ -263,20 +311,27 @@ function initContext(id)
         gl.drawElements(gl.TRIANGLES, shape.i.length, gl.UNSIGNED_SHORT, 0);
       }
     }
-    
-    function render()
-    {
-      gl.clearColor(1, 1, 1, 1); // white
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      drawSpiral();
+    // generate data
+    var spiral = generateSpiral();
+    createBuffers(spiral);
+
+    // reposition + resize
+    glMatrix.mat4.translate(spiral.modelview, spiral.modelview, [-0.5, 0.5, 0.0]);
+    glMatrix.mat4.scale(spiral.modelview, spiral.modelview, [0.5, 0.5, 0.5]);
+
+    // draw task
+    context.render = function()
+    {
+      cleanBg();
+      drawElements(spiral);
     }
 
-    return { render: render };
+    return context;
   }
 }
 
+// create context and render once
 context = initContext("wgl");
 context.render();
-
 </script>
