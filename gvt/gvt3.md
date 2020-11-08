@@ -117,7 +117,7 @@ function generateSpiral()
   var pointsTotal = Math.ceil( rotations * pointsPerRotation );
   var origins = pointsTotal - pointsPerRotation; // one less rotation
   
-  for (var i = 0; i <= pointsTotal; ++i)
+  for (var i = 0; i < pointsTotal; ++i)
   {
     var angle = i * angleScale;
     var rotation = angle / pi2;
