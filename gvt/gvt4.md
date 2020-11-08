@@ -5,7 +5,7 @@
 # GVT Task 4
 [Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt4.md)
 
-## WebGL HSV Triangle Spiral
+## WebGL Procedural Shapes
 <canvas id="wgl" width="1024" height="1024"></canvas>
 
 <script id="wgl_vertex" type="nojs">
@@ -26,8 +26,6 @@ varying vec4 vColor;
 void main()
 {
   gl_FragColor = vColor;
-  //gl_FragColor = vec4(0, 0, 0, 1); // black
-  //gl_FragColor = vec4(0.22, 1, 0.07, 1); // neon
 }
 </script>
 
@@ -40,6 +38,9 @@ function renderContext()
 {
   context.render();
 }
+
+// Use glMatrix
+const {mat2, mat3, mat4, vec2, vec3, vec4} = glMatrix;
 
 // resize helper from https://webgl2fundamentals.org/webgl/resources/webgl-utils.js
 function resizeCanvasToDisplaySize(canvas, multiplier) {
@@ -123,7 +124,7 @@ function hsl2rgb(h, s, l){
 function generateSpiral()
 {
   // create folder to control shape in dat.gui
-  var ui = gui.addFolder('Spiral');
+  var ui = gui.addFolder('Wobbly Spiral');
   ui.drawLines = false;
   gui.add(ui, "drawLines").onChange( renderContext );
 
@@ -151,9 +152,11 @@ function generateSpiral()
     var rotation = angle / pi2;
     
     var radius = a + b * rotation * rotation;
-    positions.push( radius * Math.cos(angle), radius * Math.sin(angle), 0 );
+
+    positions.push( radius * Math.cos(angle), radius * Math.sin(angle), 0.5*radius*Math.sin(5*(angle)) );
     
-    var gradientHue = (i % (pointsPerRotation+1)) / pointsPerRotation;
+    var progressRotation = (i % (pointsPerRotation+1)) / pointsPerRotation;
+    var gradientHue = progressRotation;
     var saturation = i / pointsTotal;
     var light = 1.0;
     
@@ -197,8 +200,8 @@ function initContext(id)
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
-  var projection = glMatrix.mat4.create();  // projection matrix
-  var modelviewProjection = glMatrix.mat4.create();  // combined matrix
+  var projection = mat4.create();  // projection matrix
+  var modelviewProjection = mat4.create();  // combined matrix
 
   if (gl)
   {
@@ -296,7 +299,7 @@ function initContext(id)
       }
 
       // position
-      glMatrix.mat4.multiply( modelviewProjection, projection, shape.modelview );
+      mat4.multiply( modelviewProjection, projection, shape.modelview );
       gl.uniformMatrix4fv(u_modelviewProjection, false, modelviewProjection );
 
       // ui options for drawing
@@ -317,8 +320,10 @@ function initContext(id)
     createBuffers(spiral);
 
     // reposition + resize
-    glMatrix.mat4.translate(spiral.modelview, spiral.modelview, [-0.5, 0.5, 0.0]);
-    glMatrix.mat4.scale(spiral.modelview, spiral.modelview, [0.5, 0.5, 0.5]);
+    mat4.translate(spiral.modelview, spiral.modelview, [-0.5, 0.5, 0.0]);
+    mat4.scale(spiral.modelview, spiral.modelview, [0.5, 0.5, 0.5]);
+    mat4.rotateX(spiral.modelview, spiral.modelview, 0.25);
+    mat4.rotateY(spiral.modelview, spiral.modelview, 0.25);
 
     // draw task
     context.render = function()
