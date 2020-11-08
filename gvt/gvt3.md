@@ -128,7 +128,7 @@ function generateSpiral()
     var gradientHue = (i % (pointsPerRotation+1)) / pointsPerRotation;
     var gradientValue = i / pointsTotal;
     var saturation = 0.9;
-    var alpha = (Math.floor(rotation) % 2) == 0 ? 0.1 : 1.0;
+    var alpha = (Math.round(rotation) % 2) == 0 ? 0.1 : 1.0;
     
     // hsv based gradient
     var c = hsv2rgb(gradientHue, saturation, gradientValue);
