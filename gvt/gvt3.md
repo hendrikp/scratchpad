@@ -1,7 +1,7 @@
 # GVT Task 3
 [Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt3.md)
 
-## WebGL Lines
+## WebGL HSV Triangle Spiral
 <canvas id="wgl" width="512" height="512"></canvas>
 
 <script id="wgl_vertex" type="nojs">
@@ -116,7 +116,8 @@ function generateSpiral()
   var pointsPerRotation = Math.ceil( pi2 / angleScale );
   var pointsTotal = Math.ceil( rotations * pointsPerRotation );
   var origins = pointsTotal - pointsPerRotation; // one less rotation
-  var pointsPerRotation2 = pointsPerRotation * 2;
+  var pointsPerRotation2 = 2*pointsPerRotation;
+  var fadeOut = 0.5*pointsPerRotation;
   
   for (var i = 0; i < pointsTotal; ++i)
   {
@@ -128,14 +129,13 @@ function generateSpiral()
     
     var gradientHue = (i % (pointsPerRotation+1)) / pointsPerRotation;
     var gradientValue = i / pointsTotal;
-    var saturation = 1- (i / pointsTotal);
-    var alpha = 1.0;//-((i % (pointsPerRotation2+1)) / pointsPerRotation2);
+    var saturation = 0.9; // 1-(i / pointsTotal);
+    var alpha = 1.0;
     
-    var fadeOut = pointsPerRotation;
     var nearEnd = pointsTotal - i - fadeOut;
     if (nearEnd < 0)
     {
-      alpha = 1+nearEnd/fadeOut;
+      alpha += nearEnd/fadeOut;
     }
     
     // hsv based gradient
