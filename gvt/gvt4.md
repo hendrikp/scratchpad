@@ -44,7 +44,7 @@ const {mat2, mat3, mat4, vec2, vec3, vec4} = glMatrix;
 
 // resize helper from https://webgl2fundamentals.org/webgl/resources/webgl-utils.js
 function resizeCanvasToDisplaySize(canvas, multiplier) {
-5  multiplier = multiplier || 1;
+  multiplier = multiplier || 1;
   const width  = canvas.clientWidth  * multiplier | 0;
   const height = canvas.clientHeight * multiplier | 0;
   if (canvas.width !== width ||  canvas.height !== height) {
@@ -123,11 +123,11 @@ function hsl2rgb(h, s, l){
 // generate data
 function generateSpiral( params )
 {
-  const {a, b, angleScale, rotations, drawLines} = params;
-  //ar a = 0.003; // space offset
-  //b = 0.03; // space angle per rotation factor
-  //angleScale = 0.1; // angle scale per point
-  //rotations = 5; // 5 rotations
+  const {a, b, angleScale, rotations} = params;
+  //a - space offset
+  //b - space angle per rotation factor
+  //angleScale - angle scale per point
+  //rotations - rotations
 
   var positions = [];
   var indices = [];
@@ -182,6 +182,59 @@ function generateSpiral( params )
     }
   }
   
+  return shape;
+}
+
+// generate torus based on http://www.3d-meier.de/tut3/Seite58.html
+function generateTorus( params )
+{
+  const {r, R, Nu, Nv} = params;
+  
+  var pi2 = 2 * Math.PI;
+
+  var uMin = 0.0;
+  var uMax = pi2;
+  var vMin = 0.0;
+  var vMax = pi2;
+  
+  var du = (uMax-uMin)/Nu;
+  var dv = (uMax-uMin)/Nu;
+
+  var positions = [];
+  var indices = [];
+  var colors = [];
+  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+
+  // generate points
+  for (var i=0; i<=Nu; i++)
+  {
+    for (var j=0; j<=Nv; j++)
+    {
+      var u = uMin + i * du;
+      var v = vMin + j * dv;
+
+      positions.push(
+        (R + r * Math.cos(v)) * Math.cos(u),
+        (R + r * Math.cos(v)) * Math.sin(u),
+        r * math.sin(v)
+      );
+
+      colors.push( 0.0, 0.0, 0.0, 1.0 );
+
+      // points - CCW order
+      var p = [
+        i * (Nv + 1) + j,
+        (i + 1) * (Nv + 1) + j,
+        (i + 1) * (Nv + 1) + j + 1,
+        i * (Nv + 1) + j + 1
+      ];
+
+      // generate triangles
+      indices.push( p[0], p[1], p[2] );
+      indices.push( p[0], p[2], p[3] );
+    }
+  }
+
   return shape;
 }
 
@@ -326,36 +379,76 @@ function initContext(id)
     }
 
     // generate data
-    var spiral = generateSpiral({
+    var scene = {};
+    context.scene = scene;
+    function createSceneObject(params)
+    {
+      if (params.name != '')
+      {
+        var shape = params.generator(params);
+
+        // reposition + resize
+        mat4.translate(shape.modelview, shape.modelview, params.pos);
+        mat4.scale(shape.modelview, shape.modelview, params.scale);
+        mat4.rotateX(shape.modelview, shape.modelview, params.rotate[0]);
+        mat4.rotateY(shape.modelview, shape.modelview, params.rotate[1]);
+        mat4.rotateZ(shape.modelview, shape.modelview, params.rotate[2]);
+
+        scene[shape.params.name] = shape; // place spiral into scene
+
+        return shape;
+      }
+    }
+
+    var wspiral = createSceneObject({
+      name: 'wspiral',
+      generator: generateSpiral,
+      pos: [-0.5, 0.5, 0.0],
+      scale: [0.5, 0.5, 0.5],
+      rotate: [0.25, 0.25, 0.0],
       a: 0.003, b: 0.03,
       angleScale: 0.1, rotations: 5,
-      drawLines: false
+      drawLines: true,
+      draw: drawElements,
     });
+
+
+    var torus = createSceneObject({
+      name: 'torus',
+      generator: generateTorus,
+      pos: [0.5, 0.5, 0.0],
+      scale: [0.5, 0.5, 0.5],
+      rotate: [0.25, 0.25, 0.0],
+      r: 0.003, R: 0.03,
+      Nu: 20, Nv: 20,
+      drawLines: true,
+      draw: drawElements,
+    });
+    //{r, R, Nu, Nv} 
 
     // create folder to control shape in dat.gui
     var ui = gui.addFolder('Wobbly Spiral');
-    ui.add(spiral.params, "a").onChange( function() { spiral = generateSpiral(spiral.params); renderContext();} );
-    ui.add(spiral.params, "b").onChange( function() { spiral = generateSpiral(spiral.params); renderContext();} );
-    ui.add(spiral.params, "drawLines").onChange( renderContext );
-
-    // reposition + resize
-    mat4.translate(spiral.modelview, spiral.modelview, [-0.5, 0.5, 0.0]);
-    mat4.scale(spiral.modelview, spiral.modelview, [0.5, 0.5, 0.5]);
-    mat4.rotateX(spiral.modelview, spiral.modelview, 0.25);
-    mat4.rotateY(spiral.modelview, spiral.modelview, 0.25);
+    ui.add(wspiral.params, "a", 0, 0.3, 0.0002).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
+    ui.add(wspiral.params, "b", 0, 0.3, 0.005).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
+    ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
+    ui.add(wspiral.params, "drawLines").onChange( renderContext );
 
     // draw task
     context.render = function()
     {
       cleanBg();
-      drawElements(spiral);
-    }
 
+      // draw all schapes in scene
+      for (shape in scene)
+      {
+        scene[shape].params.draw(scene[shape]);
+      }
+    }
     return context;
   }
 }
 
 // create context and render once
 context = initContext("wgl");
-context.render();
+requestAnimationFrame(renderContext);
 </script>
