@@ -5,7 +5,7 @@
 # GVT Task 4
 [Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt4.md)
 
-## WebGL Procedural Shapes
+## WebGL 3x Procedural Shapes
 <canvas id="wgl" width="1024" height="1024"></canvas>
 
 <script id="wgl_vertex" type="nojs">
@@ -44,7 +44,7 @@ const {mat2, mat3, mat4, vec2, vec3, vec4} = glMatrix;
 
 // resize helper from https://webgl2fundamentals.org/webgl/resources/webgl-utils.js
 function resizeCanvasToDisplaySize(canvas, multiplier) {
-  multiplier = multiplier || 1;
+5  multiplier = multiplier || 1;
   const width  = canvas.clientWidth  * multiplier | 0;
   const height = canvas.clientHeight * multiplier | 0;
   if (canvas.width !== width ||  canvas.height !== height) {
@@ -121,23 +121,20 @@ function hsl2rgb(h, s, l){
 }
 
 // generate data
-function generateSpiral()
+function generateSpiral( params )
 {
-  // create folder to control shape in dat.gui
-  var ui = gui.addFolder('Wobbly Spiral');
-  ui.drawLines = false;
-  gui.add(ui, "drawLines").onChange( renderContext );
+  const {a, b, angleScale, rotations, drawLines} = params;
+  //ar a = 0.003; // space offset
+  //b = 0.03; // space angle per rotation factor
+  //angleScale = 0.1; // angle scale per point
+  //rotations = 5; // 5 rotations
 
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { v: positions, i: indices, c: colors, ui: ui, modelview: glMatrix.mat4.create() };
+  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
 
   // generate data (spiral)
-  var a = 0.003; // space offset
-  var b = 0.03; // space angle per rotation factor
-  var angleScale = 0.1; // angle scale per point
-  var rotations = 5; // 5 rotations
   var pi2 = 2 * Math.PI;
   
   var pointsPerRotation = Math.ceil( pi2 / angleScale );
@@ -263,6 +260,13 @@ function initContext(id)
     // method to draw line strip
     function drawArrays(shape)
     {
+      // if buffer not yet created try (cached)
+      if (!shape.pBuffer)
+      {
+        createBuffers(shape);
+      }
+
+      // vertices
       if (shape.pBuffer)
       {
         gl.bindBuffer(gl.ARRAY_BUFFER, shape.pBuffer);
@@ -276,6 +280,12 @@ function initContext(id)
     // method to draw
     function drawElements(shape)
     {
+      // if buffer not yet created try (cached)
+      if (!shape.pBuffer)
+      {
+        createBuffers(shape);
+      }
+
       // vertices
       if (shape.pBuffer)
       {
@@ -303,7 +313,7 @@ function initContext(id)
       gl.uniformMatrix4fv(u_modelviewProjection, false, modelviewProjection );
 
       // ui options for drawing
-      if (shape.ui.drawLines == true)
+      if (shape.params.drawLines == true)
       {
         // draw lines
         gl.drawElements(gl.LINES, shape.i.length, gl.UNSIGNED_SHORT, 0);
@@ -316,8 +326,17 @@ function initContext(id)
     }
 
     // generate data
-    var spiral = generateSpiral();
-    createBuffers(spiral);
+    var spiral = generateSpiral({
+      a: 0.003, b: 0.03,
+      angleScale: 0.1, rotations: 5,
+      drawLines: false
+    });
+
+    // create folder to control shape in dat.gui
+    var ui = gui.addFolder('Wobbly Spiral');
+    ui.add(spiral.params, "a").onChange( function() { spiral = generateSpiral(spiral.params); renderContext();} );
+    ui.add(spiral.params, "b").onChange( function() { spiral = generateSpiral(spiral.params); renderContext();} );
+    ui.add(spiral.params, "drawLines").onChange( renderContext );
 
     // reposition + resize
     mat4.translate(spiral.modelview, spiral.modelview, [-0.5, 0.5, 0.0]);
