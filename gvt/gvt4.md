@@ -216,7 +216,7 @@ function generateTorus( params )
       positions.push(
         (R + r * Math.cos(v)) * Math.cos(u),
         (R + r * Math.cos(v)) * Math.sin(u),
-        r * math.sin(v)
+        r * Math.sin(v)
       );
 
       colors.push( 0.0, 0.0, 0.0, 1.0 );
@@ -405,7 +405,7 @@ function initContext(id)
       generator: generateSpiral,
       pos: [-0.5, 0.5, 0.0],
       scale: [0.5, 0.5, 0.5],
-      rotate: [0.25, 0.25, 0.0],
+      rotate: [0.5, 0.5, 0.0],
       a: 0.003, b: 0.03,
       angleScale: 0.1, rotations: 5,
       drawLines: true,
@@ -419,8 +419,8 @@ function initContext(id)
       pos: [0.5, 0.5, 0.0],
       scale: [0.5, 0.5, 0.5],
       rotate: [0.25, 0.25, 0.0],
-      r: 0.003, R: 0.03,
-      Nu: 20, Nv: 20,
+      r: 0.03, R: 0.3,
+      Nu: 10, Nv: 8,
       drawLines: true,
       draw: drawElements,
     });
@@ -432,6 +432,13 @@ function initContext(id)
     ui.add(wspiral.params, "b", 0, 0.3, 0.005).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "drawLines").onChange( renderContext );
+
+    var ui = gui.addFolder('Torus');
+    ui.add(torus.params, "r", 0, 0.3, 0.0002).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
+    ui.add(torus.params, "R", 0, 0.3, 0.005).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
+    ui.add(torus.params, "Nu", 0, 20, 1).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
+    ui.add(torus.params, "Nv", 0, 20, 1).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
+    ui.add(torus.params, "drawLines").onChange( renderContext );
 
     // draw task
     context.render = function()
