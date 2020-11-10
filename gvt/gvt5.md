@@ -18,7 +18,7 @@ Keybinds (Standard FPS/Fly Controls)
 * Hold `Shift` to move faster
 
 ## WebGL Procedural Shapes + Camera
-<canvas id="wgl" width="768" height="768"></canvas>
+<canvas id="wgl" width="768" height="768" style="outline: grey 2px solid;"></canvas>
 
 <script id="wgl_vertex" type="nojs">
 attribute vec4 pos;
