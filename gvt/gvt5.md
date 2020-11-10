@@ -384,6 +384,7 @@ function initContext(id)
       mat4.translate(camera, camera, cameraPos) // initial position
       requestAnimationFrame(renderContext);
     }
+    context.updateCamera = updateCamera;
     function resetCamera()
     {
       vec3.set(cameraPos, 0,0,-4);
@@ -636,7 +637,7 @@ window.onkeydown = function(evt)
   }
 
   vec3.add(context.cameraPos, context.cameraPos, ct);
-  updateCamera();
+  context.updateCamera();
 };
 
 // Camera/Mouse handler
@@ -654,7 +655,7 @@ function mouseDrag(evt)
 
     mat4.rotateY(context.cameraRotation, context.cameraRotation, changeX);
     mat4.rotateX(context.cameraRotation, context.cameraRotation, changeY);
-    updateCamera();
+    context.updateCamera();
   }
 }
 
