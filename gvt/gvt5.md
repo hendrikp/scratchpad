@@ -358,16 +358,22 @@ function initContext(id)
     context.u_modelview = u_modelview;
 
     // projection
-    var projection = mat4.create();  // projection matrix
-    context.projection = projection;
     var u_projection = gl.getUniformLocation(program, "projection");
     context.u_projection = u_projection;
+    var projection = mat4.create();
+    context.projection = projection;
+    var fovy = 0.5; // radians vertical
+    var zNear = 1;
+    var zFar = 1000;
+    mat4.perspective(projection, fovy, gl.canvas.width / gl.canvas.height, zNear, zFar);
+    gl.uniformMatrix4fv(u_projection, false, projection );
 
-    // camera
-    var camera = mat4.create();  // projection matrix
+    // camera (used to move with keybinds)
+    var camera = mat4.create();
     context.camera = camera;
     var u_camera = gl.getUniformLocation(program, "camera");
     context.u_camera = u_camera;
+    mat4.translate(camera, camera, [0,0,-4]) // initial position
 
     // creation of buffers
     function createBuffers(shape)
@@ -545,13 +551,6 @@ function initContext(id)
     ui.add(wspiral.params, "b", 0, 0.3, 0.005).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "drawLines").onChange( renderContext );
-
-    // update projection once
-    var fovy = 0.5; // radians vertical
-    var zNear = 0.1; // radians vertical
-    var zFar = 1000; // radians vertical
-    mat4.perspective(projection, fovy, gl.canvas.width / gl.canvas.height, zNear, zFar);
-    gl.uniformMatrix4fv(u_projection, false, projection );
 
     // draw task
     context.render = function()
