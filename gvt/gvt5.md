@@ -373,7 +373,14 @@ function initContext(id)
     context.camera = camera;
     var u_camera = gl.getUniformLocation(program, "camera");
     context.u_camera = u_camera;
-    mat4.translate(camera, camera, [0,0,-4]) // initial position
+
+    function resetCamera()
+    {
+      mat4.identity(camera);
+      mat4.translate(camera, camera, [0,0,-4]) // initial position
+    }
+    context.resetCamera = resetCamera;
+    resetCamera();
 
     // creation of buffers
     function createBuffers(shape)
@@ -551,6 +558,9 @@ function initContext(id)
     ui.add(wspiral.params, "b", 0, 0.3, 0.005).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "drawLines").onChange( renderContext );
+
+    // reset camera gui
+    gui.add(context, "resetCamera");
 
     // draw task
     context.render = function()
