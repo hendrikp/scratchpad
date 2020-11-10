@@ -638,8 +638,12 @@ function mouseDrag(evt)
     var changeX = evt.movementX / context.canvas.clientWidth;
     var changeY = evt.movementY / context.canvas.clientHeight;
 
-    mat4.rotateX(context.camera, context.camera, changeX);
-    mat4.rotateY(context.camera, context.camera, changeY);
+    changeX *= Math.PI;
+    changeY *= Math.PI;
+
+    mat4.rotateY(context.camera, context.camera, changeX);
+    mat4.rotateX(context.camera, context.camera, changeY);
+    requestAnimationFrame(renderContext);
   }
 }
 
