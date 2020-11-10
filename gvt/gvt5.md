@@ -631,7 +631,7 @@ window.onkeydown = function(evt)
 // Camera/Mouse handler
 function mouseDrag(evt)
 {
-  if (evt.buttons & 1 == 1) // mouse primary down?
+  if ((evt.buttons & 1) == 1) // mouse primary down?
   {
     var cr = [0,0,0];
 
