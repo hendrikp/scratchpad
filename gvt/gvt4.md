@@ -5,6 +5,32 @@
 # GVT Task 4
 [Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt4.md)
 
+Use controls at top to change shape params or switch to line drawing (4.1)
+
+* First shape - Torus (based on [3d-Meier](http://www.3d-meier.de/tut3/Seite58.html))
+```javascript
+x= (R + r * Math.cos(v)) * Math.cos(u)
+y= (R + r * Math.cos(v)) * Math.sin(u)
+z= r * Math.sin(v)
+```
+
+* Second shape - Drop (based on [3d-Meier](http://www.3d-meier.de/tut3/Seite44.html))
+```javascript
+x= a * (b - Math.cos(u)) *Math.sin(u) *Math.cos(v)
+y= a * (b - Math.cos(u)) *Math.sin(u) *Math.sin(v)
+z= Math.cos(u)
+```
+
+* Third shape - Custom Wobbly spiral (based on Task 2/3)
+```javascript
+radius= a + b * rotation * rotation;
+x= radius * Math.cos(angle);
+y= radius * Math.sin(angle);
+z= 0.5*radius*Math.sin(5*(angle));
+```
+
+* Also now using glMatrix and DAT.GUI
+
 ## WebGL 3x Procedural Shapes
 <canvas id="wgl" width="1024" height="1024"></canvas>
 
@@ -189,7 +215,7 @@ function generateSpiral( params )
 function generateTorus( params )
 {
   const {r, R, Nu, Nv} = params;
-  
+
   var pi2 = 2 * Math.PI;
 
   var uMin = 0.0;
@@ -198,7 +224,7 @@ function generateTorus( params )
   var vMax = pi2;
   
   var du = (uMax-uMin)/Nu;
-  var dv = (uMax-uMin)/Nu;
+  var dv = (vMax-vMin)/Nv;
 
   var positions = [];
   var indices = [];
@@ -219,7 +245,8 @@ function generateTorus( params )
         r * Math.sin(v)
       );
 
-      colors.push( 0.0, 0.0, 0.0, 1.0 );
+      var c = hsl2rgb(j/Nv, 0.5, 0.5);
+      colors.push(c[0], c[1], c[2], 1);
 
       // points - CCW order
       var p = [
@@ -230,8 +257,68 @@ function generateTorus( params )
       ];
 
       // generate triangles
-      indices.push( p[0], p[1], p[2] );
-      indices.push( p[0], p[2], p[3] );
+      if(i < Nu && j < Nv)
+      {
+        indices.push( p[0], p[1], p[2] );
+        indices.push( p[0], p[2], p[3] );
+      }
+    }
+  }
+
+  return shape;
+}
+
+// generate drop based on http://www.3d-meier.de/tut3/Seite44.html
+function generateDrop( params )
+{
+  const {a, b, Nu, Nv} = params;
+
+  var pi2 = 2 * Math.PI;
+
+  var uMin = 0.0;
+  var uMax = Math.PI;
+  var vMin = 0.0;
+  var vMax = pi2;
+  
+  var du = (uMax-uMin)/Nu;
+  var dv = (vMax-vMin)/Nv;
+
+  var positions = [];
+  var indices = [];
+  var colors = [];
+  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+
+  // generate points
+  for (var i=0; i<=Nu; i++)
+  {
+    for (var j=0; j<=Nv; j++)
+    {
+      var u = uMin + i * du;
+      var v = vMin + j * dv;
+
+      positions.push(
+        a * (b - Math.cos(u)) *Math.sin(u) *Math.cos(v),
+        a * (b - Math.cos(u)) *Math.sin(u) *Math.sin(v),
+        Math.cos(u)
+      );
+
+      var c = hsl2rgb(i/Nv, 1-i/Nu, 0.5);
+      colors.push(c[0], c[1], c[2], 1);
+
+      // points - CCW order
+      var p = [
+        i * (Nv + 1) + j,
+        (i + 1) * (Nv + 1) + j,
+        (i + 1) * (Nv + 1) + j + 1,
+        i * (Nv + 1) + j + 1
+      ];
+
+      // generate triangles
+      if(i < Nu && j < Nv)
+      {
+        indices.push( p[0], p[1], p[2] );
+        indices.push( p[0], p[2], p[3] );
+      }
     }
   }
 
@@ -400,45 +487,61 @@ function initContext(id)
       }
     }
 
-    var wspiral = createSceneObject({
-      name: 'wspiral',
-      generator: generateSpiral,
-      pos: [-0.5, 0.5, 0.0],
-      scale: [0.5, 0.5, 0.5],
-      rotate: [0.5, 0.5, 0.0],
-      a: 0.003, b: 0.03,
-      angleScale: 0.1, rotations: 5,
-      drawLines: true,
-      draw: drawElements,
-    });
-
-
+    // 4.1 + 4.2 procedural shape 1 - torus 
     var torus = createSceneObject({
       name: 'torus',
       generator: generateTorus,
       pos: [0.5, 0.5, 0.0],
       scale: [0.5, 0.5, 0.5],
-      rotate: [0.25, 0.25, 0.0],
-      r: 0.03, R: 0.3,
-      Nu: 10, Nv: 8,
-      drawLines: true,
+      rotate: [-Math.PI*0.4, -0.5, 0.0],
+      r: 0.11, R: 0.47,
+      Nu: 20, Nv: 10,
+      drawLines: false,
       draw: drawElements,
     });
-    //{r, R, Nu, Nv} 
+    var ui = gui.addFolder('Torus - 4.1+2');
+    ui.add(torus.params, "r", 0, 0.5, 0.0002).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
+    ui.add(torus.params, "R", 0, 0.5, 0.005).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
+    ui.add(torus.params, "Nu", 3, 40, 1).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
+    ui.add(torus.params, "Nv", 3, 40, 1).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
+    ui.add(torus.params, "drawLines").onChange( renderContext );
 
-    // create folder to control shape in dat.gui
-    var ui = gui.addFolder('Wobbly Spiral');
+    // 4.1 + 4.2 procedural shape 2 - drop
+    var drop = createSceneObject({
+      name: 'drop',
+      generator: generateDrop,
+      pos: [0.5, -0.5, 0.0],
+      scale: [0.3, 0.3, 0.3],
+      rotate: [-Math.PI*0.5, 0, 0.0],
+      a: 0.5, b: 1.0,
+      Nu: 20, Nv: 20,
+      drawLines: false,
+      draw: drawElements,
+    });
+    var ui = gui.addFolder('Drop - 4.1+2');
+    ui.add(drop.params, "a", 0, 1, 0.02).onChange( function() { createSceneObject(drop.params); requestAnimationFrame(renderContext);} );
+    ui.add(drop.params, "b", 0, 1, 0.02).onChange( function() { createSceneObject(drop.params); requestAnimationFrame(renderContext);} );
+    ui.add(drop.params, "Nu", 3, 40, 1).onChange( function() { createSceneObject(drop.params); requestAnimationFrame(renderContext);} );
+    ui.add(drop.params, "Nv", 3, 40, 1).onChange( function() { createSceneObject(drop.params); requestAnimationFrame(renderContext);} );
+    ui.add(drop.params, "drawLines").onChange( renderContext );
+
+    // 4.3 - custom procedural shape - extended task 3
+    var wspiral = createSceneObject({
+      name: 'wspiral',
+      generator: generateSpiral,
+      pos: [-0.5, 0, 0.0],
+      scale: [0.5, 0.5, 0.5],
+      rotate: [0.25, 0.25, 0.0],
+      a: 0.003, b: 0.03,
+      angleScale: 0.1, rotations: 5,
+      drawLines: false,
+      draw: drawElements,
+    });
+    var ui = gui.addFolder('Wobbly Spiral - 4.3');
     ui.add(wspiral.params, "a", 0, 0.3, 0.0002).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "b", 0, 0.3, 0.005).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "drawLines").onChange( renderContext );
-
-    var ui = gui.addFolder('Torus');
-    ui.add(torus.params, "r", 0, 0.3, 0.0002).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
-    ui.add(torus.params, "R", 0, 0.3, 0.005).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
-    ui.add(torus.params, "Nu", 0, 20, 1).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
-    ui.add(torus.params, "Nv", 0, 20, 1).onChange( function() { createSceneObject(torus.params); requestAnimationFrame(renderContext);} );
-    ui.add(torus.params, "drawLines").onChange( renderContext );
 
     // draw task
     context.render = function()
