@@ -362,8 +362,8 @@ function initContext(id)
     var projection = mat4.create();
     context.projection = projection;
     var fovy = 0.5; // radians vertical
-    var zNear = 1;
-    var zFar = 1000;
+    var zNear = 0.001;
+    var zFar = 100;
     mat4.perspective(projection, fovy, gl.canvas.width / gl.canvas.height, zNear, zFar);
     gl.uniformMatrix4fv(u_projection, false, projection );
 
