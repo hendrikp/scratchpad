@@ -248,17 +248,17 @@ function generateTorus( params )
       var c = hsl2rgb(j/Nv, 0.5, 0.5);
       colors.push(c[0], c[1], c[2], 1);
 
-      // points - CCW order
-      var p = [
-        i * (Nv + 1) + j,
-        (i + 1) * (Nv + 1) + j,
-        (i + 1) * (Nv + 1) + j + 1,
-        i * (Nv + 1) + j + 1
-      ];
-
       // generate triangles
       if(i < Nu && j < Nv)
       {
+        // points - CCW order
+        var p = [
+          i * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j + 1,
+          i * (Nv + 1) + j + 1
+        ];
+
         indices.push( p[0], p[1], p[2] );
         indices.push( p[0], p[2], p[3] );
       }
@@ -305,17 +305,17 @@ function generateDrop( params )
       var c = hsl2rgb(i/Nv, 1-i/Nu, 0.5);
       colors.push(c[0], c[1], c[2], 1);
 
-      // points - CCW order
-      var p = [
-        i * (Nv + 1) + j,
-        (i + 1) * (Nv + 1) + j,
-        (i + 1) * (Nv + 1) + j + 1,
-        i * (Nv + 1) + j + 1
-      ];
-
       // generate triangles
       if(i < Nu && j < Nv)
       {
+        // points - CCW order
+        var p = [
+          i * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j + 1,
+          i * (Nv + 1) + j + 1
+        ];
+
         indices.push( p[0], p[1], p[2] );
         indices.push( p[0], p[2], p[3] );
       }
