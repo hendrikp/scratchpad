@@ -627,4 +627,22 @@ window.onkeydown = function(evt)
   mat4.translate(context.camera, context.camera, ct);
   requestAnimationFrame(renderContext);
 };
+
+// Camera/Mouse handler
+function mouseDrag(evt)
+{
+  if (evt.buttons & 1 == 1) // mouse primary down?
+  {
+    var cr = [0,0,0];
+
+    var changeX = evt.movementX / context.canvas.clientWidth;
+    var changeY = evt.movementY / context.canvas.clientHeight;
+
+    mat4.rotateX(context.camera, context.camera, changeX);
+    mat4.rotateY(context.camera, context.camera, changeY);
+  }
+}
+
+context.canvas.addEventListener("mousemove", mouseDrag, false);
+
 </script>
