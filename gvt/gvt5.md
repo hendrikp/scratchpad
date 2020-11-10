@@ -636,7 +636,10 @@ window.onkeydown = function(evt)
     ct[1]=change;
   }
 
-  vec3.transformMat4(ct, ct, context.cameraRotation);
+  // we want to move relative to viewing direction
+  var transformm = mat4.clone(context.cameraRotation);
+  mat4.inverse(transformm);
+  vec3.transformMat4(ct, ct, transformm);
 
   vec3.add(context.cameraPos, context.cameraPos, ct);
   context.updateCamera();
