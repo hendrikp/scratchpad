@@ -372,12 +372,23 @@ function initContext(id)
     context.camera = camera;
     var u_camera = gl.getUniformLocation(program, "camera");
     context.u_camera = u_camera;
-
-    function resetCamera()
+    var cameraPos = vec3.create();
+    context.cameraPos = cameraPos;
+    var cameraRotation = mat4.create();
+    context.cameraRotation = cameraRotation;
+    
+    function updateCamera()
     {
       mat4.identity(camera);
-      mat4.translate(camera, camera, [0,0,-4]) // initial position
+      mat4.multiply(camera, camera, cameraRotation);
+      mat4.translate(camera, camera, cameraPos) // initial position
       requestAnimationFrame(renderContext);
+    }
+    function resetCamera()
+    {
+      vec3.set(cameraPos, 0,0,-4);
+      mat4.identity(cameraRotation);
+      updateCamera();
     }
     context.resetCamera = resetCamera;
 
@@ -597,7 +608,7 @@ window.onkeydown = function(evt)
     change *= 3.0;
   }
 
-  var ct = [0,0,0];
+  var ct = vec3.create();
 
   if (c == 'W'|| key == 38)
   {
@@ -623,9 +634,9 @@ window.onkeydown = function(evt)
   {
     ct[1]=change;
   }
-  
-  mat4.translate(context.camera, context.camera, ct);
-  requestAnimationFrame(renderContext);
+
+  vec3.add(context.cameraPos, context.cameraPos, ct);
+  updateCamera();
 };
 
 // Camera/Mouse handler
@@ -641,9 +652,9 @@ function mouseDrag(evt)
     changeX *= Math.PI;
     changeY *= Math.PI;
 
-    mat4.rotateY(context.camera, context.camera, changeX);
-    mat4.rotateX(context.camera, context.camera, changeY);
-    requestAnimationFrame(renderContext);
+    mat4.rotateY(context.cameraRotation, context.cameraRotation, changeX);
+    mat4.rotateX(context.cameraRotation, context.cameraRotation, changeY);
+    updateCamera();
   }
 }
 
