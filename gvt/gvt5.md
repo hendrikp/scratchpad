@@ -15,8 +15,7 @@ Keybinds (Standard FPS/Fly Controls)
 * `SPACE` - Move Camera Upward
 * `C` - Move Camera Down
 * Drag Canvas with mouse to rotate camera
-
-* Also now using glMatrix and DAT.GUI
+* Hold `Shift` to move faster
 
 ## WebGL Procedural Shapes + Camera
 <canvas id="wgl" width="768" height="768"></canvas>
@@ -26,12 +25,12 @@ attribute vec4 pos;
 attribute vec4 col;
 varying vec4 vColor;
 uniform mat4 projection;
+uniform mat4 camera;
 uniform mat4 modelview;
 void main()
 {
   vColor = col;
-  vec4 eyeCoords = modelview * pos;
-  gl_Position = projection * eyeCoords;
+  gl_Position = projection * camera * modelview * pos;
 }
 </script>
 
@@ -364,6 +363,12 @@ function initContext(id)
     var u_projection = gl.getUniformLocation(program, "projection");
     context.u_projection = u_projection;
 
+    // camera
+    var camera = mat4.create();  // projection matrix
+    context.camera = camera;
+    var u_camera = gl.getUniformLocation(program, "camera");
+    context.u_camera = u_camera;
+
     // creation of buffers
     function createBuffers(shape)
     {
@@ -541,13 +546,20 @@ function initContext(id)
     ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "drawLines").onChange( renderContext );
 
+    // update projection once
+    var fovy = 0.5; // radians vertical
+    var zNear = 0.1; // radians vertical
+    var zFar = 1000; // radians vertical
+    mat4.perspective(projection, fovy, gl.canvas.width / gl.canvas.height, zNear, zFar);
+    gl.uniformMatrix4fv(u_projection, false, projection );
+
     // draw task
     context.render = function()
     {
       cleanBg();
 
-      // update projection
-      gl.uniformMatrix4fv(u_projection, false, projection );
+      // update camera
+      gl.uniformMatrix4fv(u_camera, false, camera );
 
       // draw all shapes in scene
       for (shape in scene)
@@ -573,34 +585,37 @@ window.onkeydown = function(evt)
 
   if(evt.shiftKey)
   {
-    change *= 3;
+    change *= 3.0;
   }
+
+  var ct = [0,0,0];
 
   if (c == 'W'|| key == 38)
   {
-    mat4.translate(context.projection, context.projection, [0,0,change]);
+    ct[2]=change;
   }
   else if(c == 'S' || key == 40)
   {
-    mat4.translate(context.projection, context.projection, [0,0,-change]);
+    ct[2]=-change;
   }
   else if(c == 'A' || key == 37)
   {
-    mat4.translate(context.projection, context.projection, [change,0,0]);
+    ct[0]=change;
   }
   else if(c == 'D' || key == 39)
   {
-    mat4.translate(context.projection, context.projection, [-change,0,0]);
+    ct[0]=-change;
   }
   else if(c == ' ')
   {
-    mat4.translate(context.projection, context.projection, [0,change,0]);
+    ct[1]=-change;
   }
   else if(c == 'C')
   {
-    mat4.translate(context.projection, context.projection, [0,-change,0]);
+    ct[1]=change;
   }
   
+  mat4.translate(context.camera, context.camera, ct);
   requestAnimationFrame(renderContext);
 };
 </script>
