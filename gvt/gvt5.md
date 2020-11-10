@@ -380,7 +380,7 @@ function initContext(id)
     function updateCamera()
     {
       mat4.identity(camera);
-      mat4.multiply(camera, camera, cameraRotation);
+      mat4.multiply(camera, cameraRotation, camera);
       mat4.translate(camera, camera, cameraPos) // initial position
       requestAnimationFrame(renderContext);
     }
