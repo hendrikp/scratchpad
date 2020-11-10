@@ -7,10 +7,18 @@
 
 Use controls at top to change shape param
 
+Keybinds (Standard FPS/Fly Controls)
+* `W` / `Up-Arrow` - Move Camera Forward
+* `S` / `Down-Arrow` - Move Camera Backward
+* `A` / `Left-Arrow` - Strafe Camera Left
+* `D` / `Right-Arrow` - Strafe Camera Right
+* `SPACE` - Move Camera Upward
+* `C` - Move Camera Down
+* Drag Canvas with mouse to rotate camera
 
 * Also now using glMatrix and DAT.GUI
 
-## WebGL 3x Procedural Shapes
+## WebGL Procedural Shapes + Camera
 <canvas id="wgl" width="768" height="768"></canvas>
 
 <script id="wgl_vertex" type="nojs">
@@ -583,6 +591,14 @@ window.onkeydown = function(evt)
   else if(c == 'D' || key == 39)
   {
     mat4.translate(context.projection, context.projection, [-change,0,0]);
+  }
+  else if(c == ' ')
+  {
+    mat4.translate(context.projection, context.projection, [0,change,0]);
+  }
+  else if(c == 'C')
+  {
+    mat4.translate(context.projection, context.projection, [0,-change,0]);
   }
   
   requestAnimationFrame(renderContext);
