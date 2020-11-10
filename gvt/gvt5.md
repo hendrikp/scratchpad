@@ -8,6 +8,7 @@
 Use controls at top to change shape param
 
 Keybinds (Standard FPS/Fly Controls)
+* Hold `Shift` to move faster
 * `W` / `Up-Arrow` - Move Camera Forward
 * `S` / `Down-Arrow` - Move Camera Backward
 * `A` / `Left-Arrow` - Strafe Camera Left
@@ -15,7 +16,6 @@ Keybinds (Standard FPS/Fly Controls)
 * `SPACE` - Move Camera Upward
 * `C` - Move Camera Down
 * Drag Canvas with mouse to rotate camera
-* Hold `Shift` to move faster
 
 ## WebGL Procedural Shapes + Camera
 <canvas id="wgl" width="768" height="768" style="outline: grey 2px solid;"></canvas>
@@ -252,6 +252,116 @@ function generateTorus( params )
       }
     }
   }
+
+  return shape;
+}
+
+// generate icosphere based on http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html
+function generateIcosphere( params )
+{
+  const {N} = params;
+
+  //var pi2 = 2 * Math.PI;
+  var t = (1.0 + Math.sqrt(5.0)) * 0.5;
+
+  var vertices = [];
+  var positions = [];
+  var indices = [];
+  var colors = [];
+  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+
+  function addVertex(v)
+  {
+    var invLength = 1.0 / vec3.length(v);
+    vertices.push(vec3.scale( vec3.clone(v), invLength) );
+    return vertices.length;
+  }
+
+  // create 12 vertices of a icosahedron
+  addVertex(vec3.fromValues(-1,  t,  0));
+  addVertex(vec3.fromValues( 1,  t,  0));
+  addVertex(vec3.fromValues(-1, -t,  0));
+  addVertex(vec3.fromValues( 1, -t,  0));
+
+  addVertex(vec3.fromValues( 0, -1,  t));
+  addVertex(vec3.fromValues( 0,  1,  t));
+  addVertex(vec3.fromValues( 0, -1, -t));
+  addVertex(vec3.fromValues( 0,  1, -t));
+
+  addVertex(vec3.fromValues( t,  0, -1));
+  addVertex(vec3.fromValues( t,  0,  1));
+  addVertex(vec3.fromValues(-t,  0, -1));
+  addVertex(vec3.fromValues(-t,  0,  1));
+
+  for (var i=0; i < vertices.length; ++i)
+  {
+    positions.push(vertices[i][0], vertices[i][1], vertices[i][2]);
+  }
+
+  colors.push(0, 0, 0, 1);
+
+  // create 20 triangles of the icosahedron
+  indices.push(0, 11, 5);
+  indices.push(0, 5, 1);
+  indices.push(0, 1, 7);
+  indices.push(0, 7, 10);
+  indices.push(0, 10, 11);
+
+  // 5 adjacent faces 
+  indices.push(1, 5, 9);
+  indices.push(5, 11, 4);
+  indices.push(11, 10, 2);
+  indices.push(10, 7, 6);
+  indices.push(7, 1, 8);
+
+  // 5 faces around point 3
+  indices.push(3, 9, 4);
+  indices.push(3, 4, 2);
+  indices.push(3, 2, 6);
+  indices.push(3, 6, 8);
+  indices.push(3, 8, 9);
+
+  // 5 adjacent faces 
+  indices.push(4, 9, 5);
+  indices.push(2, 4, 11);
+  indices.push(6, 2, 10);
+  indices.push(8, 6, 7);
+  indices.push(9, 8, 1);
+
+  // generate points
+  /*
+  for (var i=0; i<=Nu; i++)
+  {
+    for (var j=0; j<=Nv; j++)
+    {
+      var u = uMin + i * du;
+      var v = vMin + j * dv;
+
+      positions.push(
+        (R + r * Math.cos(v)) * Math.cos(u),
+        (R + r * Math.cos(v)) * Math.sin(u),
+        r * Math.sin(v)
+      );
+
+      var c = hsl2rgb(j/Nv, 0.5, 0.5);
+      colors.push(c[0], c[1], c[2], 1);
+
+      // generate triangles
+      if(i < Nu && j < Nv)
+      {
+        // points - CCW order
+        var p = [
+          i * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j + 1,
+          i * (Nv + 1) + j + 1
+        ];
+
+        indices.push( p[0], p[1], p[2] );
+        indices.push( p[2], p[3], p[0] );
+      }
+    }
+  }*/
 
   return shape;
 }
@@ -576,7 +686,7 @@ function initContext(id)
     var wspiral = createSceneObject({
       name: 'wspiral',
       generator: generateSpiral,
-      pos: [-0.5, 0, 0.0],
+      pos: [-0.5, -0.5, 0.0],
       scale: [0.5, 0.5, 0.5],
       rotate: [0.25, 0.25, 0.0],
       a: 0.003, b: 0.03,
@@ -589,6 +699,21 @@ function initContext(id)
     ui.add(wspiral.params, "b", 0, 0.3, 0.005).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "drawLines").onChange( renderContext );
+
+    // 5 - icosphere
+    var sphere = createSceneObject({
+      name: 'sphere',
+      generator: generateIcosphere,
+      pos: [-0.5, 0.5, 0.0],
+      scale: [0.25, 0.25, 0.25],
+      rotate: [0.0, 0.0, 0.0],
+      N: 2,
+      drawLines: false,
+      draw: drawElements,
+    });
+    var ui = gui.addFolder('Icosphere');
+    ui.add(sphere.params, "N", 0, 50, 1).onChange( function() { createSceneObject(sphere.params); requestAnimationFrame(renderContext);} );
+    ui.add(sphere.params, "drawLines").onChange( renderContext );
 
     // reset camera gui
     gui.add(context, "resetCamera");
@@ -698,10 +823,8 @@ function mouseDrag(evt)
     var camRotation = context.cameraAngle;
     camRotation[0] -= changeY;
     camRotation[1] -= changeX;
-    // no-roll
     camRotation[0] = restrainPitch(camRotation[0]); // pitch
     camRotation[1] = normalizeRad(camRotation[1]); // yaw
-    //camRotation[2] = normalizeRad(camRotation[2]); // roll
 
     context.updateCamera();
   }
