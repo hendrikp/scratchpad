@@ -325,13 +325,12 @@ function initContext(id)
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
-
   if (gl)
   {
     var vs = getShader(gl, gl.VERTEX_SHADER, "wgl_vertex");
     var fs = getShader(gl, gl.FRAGMENT_SHADER, "wgl_fragment");
     
-    var context = {gl: gl, vs: vs, fs: fs};
+    var context = {gl: gl, vs: vs, fs: fs, canvas: _canvas};
 
     var program = initProgram(gl);
     context.program = program;
@@ -378,9 +377,9 @@ function initContext(id)
     {
       mat4.identity(camera);
       mat4.translate(camera, camera, [0,0,-4]) // initial position
+      requestAnimationFrame(renderContext);
     }
     context.resetCamera = resetCamera;
-    resetCamera();
 
     // creation of buffers
     function createBuffers(shape)
@@ -576,13 +575,14 @@ function initContext(id)
         scene[shape].params.draw(scene[shape]);
       }
     }
+
     return context;
   }
 }
 
 // create context and render once
 context = initContext("wgl");
-requestAnimationFrame(renderContext);
+context.resetCamera(); // init camera pos and draw
 
 // Camera/Key handler
 window.onkeydown = function(evt)
