@@ -636,6 +636,8 @@ window.onkeydown = function(evt)
     ct[1]=change;
   }
 
+  vec3.transformMat4(ct, ct, context.cameraRotation);
+
   vec3.add(context.cameraPos, context.cameraPos, ct);
   context.updateCamera();
 };
@@ -645,8 +647,6 @@ function mouseDrag(evt)
 {
   if ((evt.buttons & 1) == 1) // mouse primary down?
   {
-    var cr = [0,0,0];
-
     var changeX = evt.movementX / context.canvas.clientWidth;
     var changeY = evt.movementY / context.canvas.clientHeight;
 
