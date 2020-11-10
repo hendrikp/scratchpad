@@ -54,7 +54,7 @@ function renderContext()
 }
 
 // Use glMatrix
-const {mat2, mat3, mat4, vec2, vec3, vec4} = glMatrix;
+const {mat4, vec3, quat} = glMatrix;
 
 // resize helper from https://webgl2fundamentals.org/webgl/resources/webgl-utils.js
 function resizeCanvasToDisplaySize(canvas, multiplier) {
@@ -313,6 +313,11 @@ function generateDrop( params )
   return shape;
 }
 
+function rad2deg(r)
+{
+  return r * (180.0/Math.PI);
+}
+
 // init context
 function initContext(id)
 {
@@ -374,21 +379,36 @@ function initContext(id)
     context.u_camera = u_camera;
     var cameraPos = vec3.create();
     context.cameraPos = cameraPos;
+    var cameraAngle = [0,0,0];
+    context.cameraAngle = cameraAngle;
     var cameraRotation = mat4.create();
     context.cameraRotation = cameraRotation;
     
     function updateCamera()
     {
+      // create camera rotation from camera angles
+      var rot = quat.create();
+      quat.fromEuler(rot, rad2deg(cameraAngle[0]), rad2deg(cameraAngle[1]), rad2deg(cameraAngle[2]));
+      mat4.fromQuat(context.cameraRotation, rot);
+      mat4.invert(context.cameraRotation, context.cameraRotation);
+
+      // finalize camera (rot+pos)
       mat4.identity(camera);
       mat4.multiply(camera, cameraRotation, camera);
-      mat4.translate(camera, camera, cameraPos) // initial position
+      mat4.translate(camera, camera, cameraPos);
       requestAnimationFrame(renderContext);
     }
     context.updateCamera = updateCamera;
     function resetCamera()
     {
-      vec3.set(cameraPos, 0,0,-4);
+      vec3.set(cameraPos, 0,0,-4); // initial pos
+
+      // rotation
+      cameraAngle[0]=0;
+      cameraAngle[1]=0;
+      cameraAngle[2]=0;
       mat4.identity(cameraRotation);
+
       updateCamera();
     }
     context.resetCamera = resetCamera;
@@ -637,13 +657,32 @@ window.onkeydown = function(evt)
   }
 
   // we want to move relative to viewing direction
-  var transformm = mat4.clone(context.cameraRotation);
-  mat4.invert(transformm, transformm);
-  vec3.transformMat4(ct, ct, transformm);
+  var transformDir = mat4.clone(context.cameraRotation);
+  mat4.invert(transformDir, transformDir);
+  vec3.transformMat4(ct, ct, transformDir);
 
   vec3.add(context.cameraPos, context.cameraPos, ct);
   context.updateCamera();
 };
+
+
+function normalizeRad(r)
+{
+  while (r < 0)
+    r += Math.PI*2;
+  while (r >= Math.PI*2)
+    r -= Math.PI*2;
+  return r;
+}
+
+function restrainPitch(r)
+{
+  if (r < -Math.PI*0.5)
+    r = -Math.PI*0.5;
+  if (r > Math.PI*0.5)
+    r = Math.PI*0.5;
+  return r;
+}
 
 // Camera/Mouse handler
 function mouseDrag(evt)
@@ -652,12 +691,18 @@ function mouseDrag(evt)
   {
     var changeX = evt.movementX / context.canvas.clientWidth;
     var changeY = evt.movementY / context.canvas.clientHeight;
-
     changeX *= Math.PI;
     changeY *= Math.PI;
 
-    mat4.rotateY(context.cameraRotation, context.cameraRotation, changeX);
-    mat4.rotateX(context.cameraRotation, context.cameraRotation, changeY);
+    // handle angles
+    var camRotation = context.cameraAngle;
+    camRotation[0] -= changeY;
+    camRotation[1] -= changeX;
+    // no-roll
+    camRotation[0] = restrainPitch(camRotation[0]); // pitch
+    camRotation[1] = normalizeRad(camRotation[1]); // yaw
+    //camRotation[2] = normalizeRad(camRotation[2]); // roll
+
     context.updateCamera();
   }
 }
