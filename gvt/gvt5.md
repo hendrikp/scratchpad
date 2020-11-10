@@ -248,7 +248,7 @@ function generateTorus( params )
         ];
 
         indices.push( p[0], p[1], p[2] );
-        indices.push( p[0], p[2], p[3] );
+        indices.push( p[2], p[3], p[0] );
       }
     }
   }
@@ -305,7 +305,7 @@ function generateDrop( params )
         ];
 
         indices.push( p[0], p[1], p[2] );
-        indices.push( p[0], p[2], p[3] );
+        indices.push( p[2], p[3], p[0] );
       }
     }
   }
