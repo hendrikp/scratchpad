@@ -352,10 +352,10 @@ function generateIcosphere( params )
           var b = getMiddlePoint(indices[tri+1], indices[tri+2]);
           var c = getMiddlePoint(indices[tri+2], indices[tri+0]);
 
-          indices2.push(indices[tri+0], a, c));
-          indices2.push(indices[tri+1], b, a));
-          indices2.push(indices[tri+2], c, b));
-          indices2.push(a, b, c));
+          indices2.push(indices[tri+0], a, c);
+          indices2.push(indices[tri+1], b, a);
+          indices2.push(indices[tri+2], c, b);
+          indices2.push(a, b, c);
       }
       indices = indices2;
   }
