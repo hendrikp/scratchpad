@@ -365,44 +365,10 @@ function generateIcosphere( params )
   for (var i=0; i < vertices.length; ++i)
   {
     positions.push(vertices[i][0], vertices[i][1], vertices[i][2]);
+    colors.push(0, 0, 0, 1);
+    colors.push(0, 0, 0, 1);
+    colors.push(0, 0, 0, 1);
   }
-
-  colors.push(0, 0, 0, 1);
-
-  // generate points
-  /*
-  for (var i=0; i<=Nu; i++)
-  {
-    for (var j=0; j<=Nv; j++)
-    {
-      var u = uMin + i * du;
-      var v = vMin + j * dv;
-
-      positions.push(
-        (R + r * Math.cos(v)) * Math.cos(u),
-        (R + r * Math.cos(v)) * Math.sin(u),
-        r * Math.sin(v)
-      );
-
-      var c = hsl2rgb(j/Nv, 0.5, 0.5);
-      colors.push(c[0], c[1], c[2], 1);
-
-      // generate triangles
-      if(i < Nu && j < Nv)
-      {
-        // points - CCW order
-        var p = [
-          i * (Nv + 1) + j,
-          (i + 1) * (Nv + 1) + j,
-          (i + 1) * (Nv + 1) + j + 1,
-          i * (Nv + 1) + j + 1
-        ];
-
-        indices.push( p[0], p[1], p[2] );
-        indices.push( p[2], p[3], p[0] );
-      }
-    }
-  }*/
 
   return shape;
 }
