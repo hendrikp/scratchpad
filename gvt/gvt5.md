@@ -462,7 +462,18 @@ function initContext(id)
 
     // clean + enable depth / features
     cleanBg();
+
+    // Backface culling.
+    gl.frontFace(gl.CCW);
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.BACK);
+
     gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+
+    // Polygon offset of rastered Fragments.
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(0.5, 0);
 
     // prepare viewport
     resizeCanvasToDisplaySize(gl.canvas);
@@ -701,7 +712,7 @@ function initContext(id)
       drawLines: false,
       draw: drawElements,
     });
-    var ui = gui.addFolder('Wobbly Spiral - 4.3');
+    var ui = gui.addFolder('Wobbly Spiral - 4.3 (only frontface)');
     ui.add(wspiral.params, "a", 0, 0.3, 0.0002).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "b", 0, 0.3, 0.005).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
     ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestAnimationFrame(renderContext);} );
