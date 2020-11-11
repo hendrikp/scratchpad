@@ -268,7 +268,6 @@ function generateIcosphere( params )
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
 
   function addVertex(v)
   {
@@ -359,7 +358,6 @@ function generateIcosphere( params )
       }
       indices = indices2;
   }
-  shape.indices = indices;
 
   // done, now add triangles to mesh
   for (var i=0; i < vertices.length; ++i)
@@ -370,6 +368,7 @@ function generateIcosphere( params )
     colors.push(0, 0, 0, 1);
   }
 
+  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
   return shape;
 }
 
@@ -719,7 +718,7 @@ function initContext(id)
       draw: drawElements,
     });
     var ui = gui.addFolder('Icosphere');
-    ui.add(sphere.params, "N", 0, 50, 1).onChange( function() { createSceneObject(sphere.params); requestAnimationFrame(renderContext);} );
+    ui.add(sphere.params, "N", 0, 5, 1).onChange( function() { createSceneObject(sphere.params); requestAnimationFrame(renderContext);} );
     ui.add(sphere.params, "drawLines").onChange( renderContext );
 
     // reset camera gui
