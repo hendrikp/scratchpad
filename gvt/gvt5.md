@@ -273,9 +273,29 @@ function generateIcosphere( params )
   function addVertex(v)
   {
     var invLength = 1.0 / vec3.length(v);
-    vertices.push(vec3.scale( vec3.clone(v), invLength) );
-    return vertices.length;
+    var copy = vec3.clone(v);
+    vec3.scale(copy, copy, invLength);
+    vertices.push(copy);
+    return vertices.length-1;
   }
+
+  function getMiddlePoint(a, b)
+  {
+    // center between both points
+    var mid = vec3.create();
+    vec3.lerp(mid, vertices[a], vertices[b], 0.5);
+
+    // check if not already exists
+    for (var i = 0; i < vertices.length; i++)
+    {
+      if (vec3.equals(mid, vertices[i]))
+      {
+        return i;
+      }
+    }
+
+    return addVertex(mid);
+	}
 
   // create 12 vertices of a icosahedron
   addVertex(vec3.fromValues(-1,  t,  0));
@@ -292,13 +312,6 @@ function generateIcosphere( params )
   addVertex(vec3.fromValues( t,  0,  1));
   addVertex(vec3.fromValues(-t,  0, -1));
   addVertex(vec3.fromValues(-t,  0,  1));
-
-  for (var i=0; i < vertices.length; ++i)
-  {
-    positions.push(vertices[i][0], vertices[i][1], vertices[i][2]);
-  }
-
-  colors.push(0, 0, 0, 1);
 
   // create 20 triangles of the icosahedron
   indices.push(0, 11, 5);
@@ -327,6 +340,34 @@ function generateIcosphere( params )
   indices.push(6, 2, 10);
   indices.push(8, 6, 7);
   indices.push(9, 8, 1);
+
+  // refine triangles
+  for (var i = 0; i < N; i++)
+  {
+      var indices2 = [];
+      for (var tri = 0; tri < indices.length; tri += 3)
+      {
+          // replace triangle by 4 triangles
+          var a = getMiddlePoint(indices[tri+0], indices[tri+1]);
+          var b = getMiddlePoint(indices[tri+1], indices[tri+2]);
+          var c = getMiddlePoint(indices[tri+2], indices[tri+0]);
+
+          indices2.push(indices[tri+0], a, c));
+          indices2.push(indices[tri+1], b, a));
+          indices2.push(indices[tri+2], c, b));
+          indices2.push(a, b, c));
+      }
+      indices = indices2;
+  }
+  shape.indices = indices;
+
+  // done, now add triangles to mesh
+  for (var i=0; i < vertices.length; ++i)
+  {
+    positions.push(vertices[i][0], vertices[i][1], vertices[i][2]);
+  }
+
+  colors.push(0, 0, 0, 1);
 
   // generate points
   /*
