@@ -261,7 +261,6 @@ function generateIcosphere( params )
 {
   const {N} = params;
 
-  //var pi2 = 2 * Math.PI;
   var t = (1.0 + Math.sqrt(5.0)) * 0.5;
 
   var vertices = [];
@@ -359,13 +358,15 @@ function generateIcosphere( params )
       indices = indices2;
   }
 
-  // done, now add triangles to mesh
+  // convert vertices to position array
   for (var i=0; i < vertices.length; ++i)
   {
     positions.push(vertices[i][0], vertices[i][1], vertices[i][2]);
-    colors.push(0, 0, 0, 1);
-    colors.push(0, 0, 0, 1);
-    colors.push(0, 0, 0, 1);
+
+    // coloration
+    var len = vec3.length(vertices[i]);
+    var c = hsl2rgb(Math.abs(vertices[i][0]/len), 0.7, 0.5);
+    colors.push(c[0], c[1], c[2], 1);
   }
 
   var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
@@ -713,12 +714,12 @@ function initContext(id)
       pos: [-0.5, 0.5, 0.0],
       scale: [0.25, 0.25, 0.25],
       rotate: [0.0, 0.0, 0.0],
-      N: 2,
+      N: 3,
       drawLines: false,
       draw: drawElements,
     });
-    var ui = gui.addFolder('Icosphere');
-    ui.add(sphere.params, "N", 0, 5, 1).onChange( function() { createSceneObject(sphere.params); requestAnimationFrame(renderContext);} );
+    var ui = gui.addFolder('Icosphere - 5');
+    ui.add(sphere.params, "N", 0, 4, 1).onChange( function() { createSceneObject(sphere.params); requestAnimationFrame(renderContext);} );
     ui.add(sphere.params, "drawLines").onChange( renderContext );
 
     // reset camera gui
