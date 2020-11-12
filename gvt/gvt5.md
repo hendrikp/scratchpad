@@ -749,7 +749,7 @@ function initContext(id)
     });
 
     var ui = gui.addFolder('Scene Grid');
-    ui.add(grid.params, "gridsize", 0, 100, 1).onChange( function() {
+    ui.add(grid.params, "gridsize", 1, 100, 1).onChange( function() {
       gridsize = grid.params.gridsize;
       grid.params.pos = [-gridsize*0.5, -1, gridsize*0.5]; // when size changes need to also recenter grid
       createSceneObject(grid.params);
