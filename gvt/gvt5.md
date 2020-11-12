@@ -109,13 +109,18 @@ function initProgram(gl)
 }
 
 // color conversion for gradient (based on: https://axonflux.com/handy-rgb-to-hsl-and-rgb-to-hsv-color-model-c)
-function hsl2rgb(h, s, l){
+function hsl2rgb(h, s, l)
+{
     var r, g, b;
 
-    if(s == 0){
+    if(s == 0)
+    {
         r = g = b = l; // achromatic
-    }else{
-        function hue2rgb(p, q, t){
+    }
+    else
+    {
+        function hue2rgb(p, q, t)
+        {
             if(t < 0) t += 1;
             if(t > 1) t -= 1;
             if(t < 1/6) return p + (q - p) * 6 * t;
@@ -358,14 +363,23 @@ function generateIcosphere( params )
       indices = indices2;
   }
 
+  var pi2 = 2*Math.PI;
+
   // convert vertices to position array
   for (var i=0; i < vertices.length; ++i)
   {
     positions.push(vertices[i][0], vertices[i][1], vertices[i][2]);
 
     // coloration
-    var len = vec3.length(vertices[i]);
-    var c = hsl2rgb(Math.abs(vertices[i][0]/len), 0.7, 0.5);
+    // looks also ok (front facing hue change)
+    //var len = vec3.length(vertices[i]);
+    //var hue = Math.abs(vertices[i][0]/len);
+
+    // but this xz angle based hue change is looking better  
+    var hue = (Math.PI+Math.atan2(vertices[i][0], vertices[i][2])) / pi2;
+
+    var c = hsl2rgb(hue, 0.7, 0.5);
+    
     colors.push(c[0], c[1], c[2], 1);
   }
 
@@ -408,6 +422,60 @@ function generateDrop( params )
       );
 
       var c = hsl2rgb(i/Nv, 1-i/Nu, 0.5);
+      colors.push(c[0], c[1], c[2], 1);
+
+      // generate triangles
+      if(i < Nu && j < Nv)
+      {
+        // points - CCW order
+        var p = [
+          i * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j + 1,
+          i * (Nv + 1) + j + 1
+        ];
+
+        indices.push( p[0], p[1], p[2] );
+        indices.push( p[2], p[3], p[0] );
+      }
+    }
+  }
+
+  return shape;
+}
+
+// generate a grid for horizon line (better for camera movement)
+function generateGrid( params )
+{
+  const {gridsize, N} = params;
+
+  var Nu = N;
+  var Nv = N;
+
+  var uMin = 0.0;
+  var uMax = gridsize;
+  var vMin = 0.0;
+  var vMax = gridsize;
+  
+  var du = (uMax-uMin)/Nu;
+  var dv = (vMax-vMin)/Nv;
+
+  var positions = [];
+  var indices = [];
+  var colors = [];
+  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+
+  // generate points
+  for (var i=0; i<=Nu; i++)
+  {
+    for (var j=0; j<=Nv; j++)
+    {
+      var u = uMin + i * du;
+      var v = vMin + j * dv;
+
+      positions.push(u,v,0);
+
+      var c = hsl2rgb(i/Nv, 0.5, 0.4);
       colors.push(c[0], c[1], c[2], 1);
 
       // generate triangles
@@ -545,7 +613,7 @@ function initContext(id)
     function createBuffers(shape)
     {
       // store vertices
-      if (shape.c)
+      if (shape.v)
       {
         shape.pBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, shape.pBuffer);
@@ -553,8 +621,10 @@ function initContext(id)
       }
 
       // store indices
-      if (shape.c)
+      if (shape.i)
       {
+        console.assert((shape.i.length%3) == 0, "Indices not triangles");
+
         shape.iBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.iBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(shape.i), gl.STATIC_DRAW);
@@ -562,7 +632,9 @@ function initContext(id)
 
       // store colors
       if (shape.c)
-      {
+      {        
+        console.assert((shape.v.length/3) == (shape.c.length/4), "Vertices and Colors not matching");
+
         shape.cBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, shape.cBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.c), gl.STATIC_DRAW);
@@ -590,7 +662,7 @@ function initContext(id)
       gl.uniformMatrix4fv(u_modelview, false, shape.modelview );
 
       // draw
-      gl.drawArrays(gl.LINE_STRIP, 0, shape.v.length / 2);
+      gl.drawArrays(gl.LINE_STRIP, 0, shape.v.length / 3);
     }
 
     // method to draw
@@ -661,6 +733,30 @@ function initContext(id)
         return shape;
       }
     }
+
+    // grid
+    var gridsize = 30;
+    var grid = createSceneObject({
+      name: 'grid',
+      generator: generateGrid,
+      pos: [-gridsize*0.5, -1, gridsize*0.5],
+      scale: [1, 1, 1],
+      rotate: [-Math.PI*0.5, 0, 0.0],
+      gridsize: gridsize,
+      N: 50,
+      drawLines: true,
+      draw: drawElements,
+    });
+
+    var ui = gui.addFolder('Scene Grid');
+    ui.add(grid.params, "gridsize", 0, 1, 100).onChange( function() {
+      gridsize = grid.params.gridsize;
+      grid.params.pos = [-gridsize*0.5, -1, gridsize*0.5]; // when size changes need to also recenter grid
+      createSceneObject(grid.params);
+      requestAnimationFrame(renderContext);
+      } );
+    ui.add(grid.params, "N", 2, 50, 1).onChange( function() { createSceneObject(grid.params); requestAnimationFrame(renderContext);} );
+    ui.add(grid.params, "drawLines").onChange( renderContext );
 
     // 4.1 + 4.2 procedural shape 1 - torus 
     var torus = createSceneObject({
