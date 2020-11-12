@@ -285,7 +285,8 @@ function generateIcosphere( params )
     // center between both points
     var mid = vec3.create();
     vec3.lerp(mid, vertices[a], vertices[b], 0.5);
-
+    vec3.normalize(mid, mid);
+    
     // check if not already exists
     for (var i = 0; i < vertices.length; i++)
     {
