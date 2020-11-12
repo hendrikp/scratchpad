@@ -275,10 +275,8 @@ function generateIcosphere( params )
 
   function addVertex(v)
   {
-    var invLength = 1.0 / vec3.length(v);
-    var copy = vec3.clone(v);
-    vec3.scale(copy, copy, invLength);
-    vertices.push(copy);
+    vec3.normalize(v,v);
+    vertices.push(v);
     return vertices.length-1;
   }
 
