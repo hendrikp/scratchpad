@@ -587,14 +587,10 @@ function generatePyramid( params )
     -1.0, -1.0,  1.0
   ];
 
-  for(var i = 0; i < positions.length; i++)
+  for(var i = 0; i < positions.length; i+=3)
   {
     colors.push(0.9, 0, 0, 1); // red
-
-    if(i % 3 == 0)
-    {
-      indices.push( i+0, i+1, i+2);
-    }
+    indices.push( i+0, i+1, i+2);
   }
 
   // bottom CCW
