@@ -32,36 +32,30 @@ function(exports, ui, dojo, dom, domConstruct, domStyle, BorderContainer, Conten
         "class": "edgePanel",
         content: "COG1 Rendering Pipeline"
     	});
+	
     	appLayout.addChild(headerPane);
-
-		// infoPane = new ContentPane({
-        // region: "left",
-        // "class": "edgePanel",
-        // //content: "help"
-    	// });		
-    	// appLayout.addChild(infoPane);
-
 		helpPane = new ContentPane({
-        region: "bottom",
-        "class": "edgePanel"
-        //content: "help"
-    	});		
+		region: "bottom",
+		"class": "edgePanel"
+		//content: "help"
+    	});
+	
     	appLayout.addChild(helpPane);
-
-		controlsPane = new ContentPane({
-        region: "right",
-        "class": "edgePanel"
-        //content: "controls"
-    	});		
+	
+	controlsPane = new ContentPane({
+		region: "right",
+		"class": "edgePanel",
+		style: "width: 282px;"
+		//content: "controls"
+    	});
     	appLayout.addChild(controlsPane);
 
-		canvasPane = new ContentPane({
-        region: "center",
-        "class": "centerPanel",
-		//style: "overflow:hidden",
+	canvasPane = new ContentPane({
+		region: "center",
+		"class": "centerPanel",
 		doLayout : true
-        //content: "canvas"
-    	});		
+		//content: "canvas"
+    	});
     	appLayout.addChild(canvasPane);
     	// Give the canvas a pane a custom resize.
     	
@@ -89,8 +83,8 @@ function(exports, ui, dojo, dom, domConstruct, domStyle, BorderContainer, Conten
 			//height : canvasHeight,//500
 			className : "canvas"
 		}, canvasPane.domNode, "first");
-		canvas.width = canvas.clientWidth;
-		canvas.height = canvas.clientHeight;
+		canvas.width = canvas.clientWidth / 2;
+		canvas.height = canvas.clientHeight / 2;
 		
 	}
 	

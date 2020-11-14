@@ -78,14 +78,14 @@ define(["exports", "scene"], function(exports, scene) {
 		if((width != buf.width) || (height != buf.height)) {
 			console.log("WARNING: Dimension of the canvas pixel match the CSS pixel.");
 		}
-		
-		// Calculate size for rgba pixel.
-		bufSize = width * height * 4;
+
 		// Initialize the zBuffer.
 		zBufSize = width * height;
-		bufSize = zBufSize * 4;
 		zBuf = new Array(zBufSize);
-
+		
+		// Calculate size for rgba pixel.
+		bufSize = zBufSize * 4;
+		
 		// Init dirty rectangle.
 		dirtyRect.x = 0;
 		dirtyRect.y = 0;
@@ -100,20 +100,13 @@ define(["exports", "scene"], function(exports, scene) {
 	 * @parameter color is an object-array with rgba values
 	 * @return true on pass.
 	 */
-	function zBufferTest(x, y, z, color) {
-
-		// Check range.
-		/* // speedup if really needed then set already does a rangecheck no need to do it again
-		if(x < 0 || y < 0 || x >= width || y >= height) {
-			return false;
-		} */
-
-		var indexZBuf = y * width + x;
-
+	function zBufferTest(indexz, z, rgba) {
 		// BEGIN exercise z-Buffer
 
 		// The camera is in the origin looking in negative z-direction.
-
+		if(z > zBuf[indexz] && zBuf[indexz] != maxDistance && z != maxDistance)
+			return false;
+		
 		// END exercise z-Buffer
 
 		return true;
@@ -124,11 +117,11 @@ define(["exports", "scene"], function(exports, scene) {
 	 * @parameter color is an object with colorname : rgba values
 	 * @paramter performZBufferTest is set to true per default if not given.
 	 */
+	/*
 	function set(x, y, z, color, performZBufferTest) {
 		// Check range.
 		if(x < 0 || x >= width || y < 0 || y >= height) {
-			// console.log("Error: Framebuffer out of range: " + x + " ,
-			// " + y);
+			// console.log("Error: Framebuffer out of range: " + x + " " + y);
 			return;
 		}
 
@@ -154,32 +147,29 @@ define(["exports", "scene"], function(exports, scene) {
 		data[++index] = rgba[3];
 		// force alpha to 100%.
 		// data[index + 3] = 255;
-	}
+	}*/
 	
 	/**
 	 * Optimized version of set a pixel/fragment in the frame-buffer and in z-buffer
 	 * @parameter rgba rgba array
-	 * @paramter performZBufferTest is set to true per default if not given.
 	 */
-	function setFast(x, y, z, rgba, performZBufferTest) {
-		var index = (y * width + x) * 4;
-		
-		/*
+	function setFast(x, y, z, rgba) {
+		var indexz = (y * width + x);
+		var index = indexz << 2; //* 4;
+
 		// Perform zBuffer-test.
-		if(performZBufferTest == undefined || performZBufferTest == true) {
-			if(! zBufferTest(x, y, z, color)) {
-				return;
-			}
+		if(!zBufferTest(indexz, z, rgba)) {
+			return;
 		}
-		*/
+
+		// Set in Z-Buffer
+		zBuf[indexz] = z;
 		
-		// Index in frame-buffer.
+		// Set in Framebuffer
 		data[index] = rgba[0];
 		data[++index] = rgba[1];
 		data[++index] = rgba[2];
 		data[++index] = rgba[3];
-		// force alpha to 100%.
-		// data[index + 3] = 255;
 	}
 	
 	/**
@@ -203,8 +193,8 @@ define(["exports", "scene"], function(exports, scene) {
 	/*
 	 * Call before every frame or to clear.
 	 */
-	function reset() {
-		
+	function reset()
+	{
 		if(dirtyRect.xMax <= 0 && dirtyRect.yMax <= 0)
 			return;
 		
@@ -217,30 +207,29 @@ define(["exports", "scene"], function(exports, scene) {
 		var b = bgColor[2];
 		var a = bgColor[3];
 		var bgcolor = (a << 24) | (b << 16) | (g << 8) | r;
-		
-		// Reset zBuffer. // not required atm
-		//for(var i = dirtyStartIndex; i < dirtyEndIndex; ++i) {
-		//	zBuf[i] = maxDistance;
-		//}
-		
+
 		// maybe for later: zBuf = zBuf_maxDistance.slice(0);
 		//zBuf.set(this.buffer8);
-	
-		// Not good enough because of reallocation each reset
-		/*
-		//ctx.clearRect(dirtyRect.x, dirtyRect.y, dirtyRect.xMax-dirtyRect.x, dirtyRect.yMax-dirtyRect.y);
-		//buf = ctx.getImageData(0, 0, width, height);
-		*/
 		
 		//  http://jsperf.com/canvas-pixel-manipulation/37 2 but avoid memory reallocation
 		var framesize = width*height*4;
 		if(this.buffersize != framesize)
-		{
+		{	
+			this.zBufSize = framesize / 4;
+			this.zBuf = new Array(this.zBufSize);
+			
+			// RGBA
+			this.bufSize = framesize;
 			this.buffersize = framesize;
 			this.buffer = new ArrayBuffer(this.buffersize);
 			this.buffer8 = new Uint8Array(this.buffer); // clamp is useless or color is already clamped
 			this.buffer32 = new Uint32Array(this.buffer);
 			this.bgcolorold = 0;
+		}
+		
+		// Reset zBuffer. 
+		for(var i = dirtyStartIndex; i < dirtyEndIndex; ++i) {
+			zBuf[i] = maxDistance;
 		}
 		
 		if(bgcolor != this.bgcolorold)
@@ -263,13 +252,9 @@ define(["exports", "scene"], function(exports, scene) {
 	}
 
 	function display() {
-
-		if(scene.getDebug_zBuffer()) {
-			MultiplyFramebufferWithZBuffer();
-		}
-
 		dirtyRect.width = dirtyRect.xMax - dirtyRect.x;
 		dirtyRect.height = dirtyRect.yMax - dirtyRect.y;
+
 		// Check if nothing changed.
 		if(dirtyRect.width < 0 || dirtyRect.height < 0) {
 			return;
@@ -278,6 +263,11 @@ define(["exports", "scene"], function(exports, scene) {
 			dirtyRect.width++;
 			dirtyRect.height++;
 		}
+		
+		if(scene.getDebug_zBuffer()) {
+			MultiplyFramebufferWithZBuffer();
+		}
+
 		ctx.putImageData(buf, 0, 0, dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
 	}
 
@@ -289,26 +279,42 @@ define(["exports", "scene"], function(exports, scene) {
 		// reversed, complementary and scale linearly.
 		var min = -maxDistance;
 		var max = maxDistance;
+		
+		var dirtyStartIndex = dirtyRect.y * width + dirtyRect.x;
+		var dirtyEndIndex = dirtyRect.yMax * width + dirtyRect.xMax;
+		
 		// Get min and max.
-		for(var i = 0; i < zBufSize; ++i) {
+		for(var i = dirtyStartIndex; i < dirtyEndIndex; ++i) {
 			if(zBuf[i] == maxDistance)
 				continue;
+			
+			if(zBuf[i] < maxDistance || zBuf[i] > -maxDistance)
+				continue;
+			
 			if(zBuf[i] > max) {
 				max = zBuf[i];
-			} else if(zBuf[i] < min) {
+			}
+			
+			if(zBuf[i] < min) {
 				min = zBuf[i];
 			}
 		}
+		
 		var range = Math.abs(max - min);
 		if(range == 0)
 			range = 1;
-		// console.log("min="+min+" max="+max+" range="+range);
+		
+		//console.log("z-Buffer Scaler: min="+min+" max="+max+" range="+range);
+		
 		// Scale between min and max.
-		for(var i = 0; i < zBufSize; ++i) {
-			if(zBuf[i] == maxDistance) {
+		for(var i = dirtyStartIndex; i < dirtyEndIndex; ++i) {
+			if(zBuf[i] == maxDistance)
+			{
+				zBuf[i] = 1;
 				continue;
 			}
-			// Set offset to zero (also wen min is negative) than scale.
+			
+			// Set offset to zero (also wen min is negative) then scale.
 			zBuf[i] = (zBuf[i] - min) / range;
 		}
 	}
@@ -316,37 +322,42 @@ define(["exports", "scene"], function(exports, scene) {
 	/*
 	 * Multiply the z-buffer for visualization to interval [0,1].
 	 */
-	function MultiplyFramebufferWithZBuffer() {
-
+	function MultiplyFramebufferWithZBuffer()
+	{
 		scaleZBuffer();
 
 		var dirtyStartIndex = dirtyRect.y * width + dirtyRect.x;
 		var dirtyEndIndex = dirtyRect.yMax * width + dirtyRect.xMax;
 		
 		var z;
-		var j = dirtyStartIndex;
+		var j = dirtyStartIndex*4;
 		for(var i = dirtyStartIndex; i < dirtyEndIndex; ++i)
+		//for(var i = 0; i < zBufSize; ++i)
 		{
 			z = zBuf[i];
 			
-			// Set the bgColor if z not maxDistance, which is not
-			// scaled.
+			// Set the bgColor if z not maxDistance, which is not scaled.
 			if(z != maxDistance) {
 				z = 1 - z;
-				data[j] *= z;
-				data[++j] *= z;
-				data[++j] *= z;
-				// data[++j] *= z // Alpha remains.
-				j +=2;
+				data[j] = 255*z;
+				data[++j] = 255*z;
+				data[++j] = 255*z;
+				data[++j] = 255;
+				++j;
 			} else {
-				j += 4;
+				data[j] = bgColor[0];
+				data[++j] = bgColor[1];
+				data[++j] = bgColor[2];
+				data[++j] = bgColor[3];
+				++j;
 			}
 		}
 	}
 
 	// Public API.
 	exports.init = init;
-	exports.set = set;
+	//exports.set = set;
+	exports.maxDistance =  maxDistance;
 	exports.setFast = setFast;
 	exports.setDirtyPoint = setDirtyPoint;
 	exports.zBufferTest = zBufferTest;

@@ -34,10 +34,21 @@ define(["exports"], function(exports) {
 		[1,2,6,5],
 		[2,3,7,6],
 		[3,0,4,7]
-	];	
+	];
 	exports.polygonColors = [0,1,2,3,4,5];
-	//exports.vertexNormals = [];
-	//exports.polygonNormals = [];
-	//exports.polygonTextureCoord = [];
 	
+	exports.textureCoord = [
+	      // Front face
+	      [0.0, 0.0],
+	      [1.0, 0.0],
+	      [1.0, 1.0],
+	      [0.0, 1.0],
+
+	      // Back face
+	      [1.0, 0.0],
+	      [1.0, 1.0],
+	      [0.0, 1.0],
+	      [0.0, 0.0]
+	];
+	//exports.polygonNormals = [];
 });

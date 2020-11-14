@@ -4,9 +4,9 @@
  * @namespace cog1
  * @module ui
  */
-define(["exports", "app", "layout", "scene", "scenegraph", "shader", "dojo", "dojo/html", "dojo/on", "dojo/dom", "dojo/dom-construct", "dojo/dom-style", "dojo/mouse", "dijit/form/Button", "dijit/form/ToggleButton", "dijit/form/Slider", "dijit/form/VerticalSlider", "dijit/form/HorizontalSlider", "dijit/form/TextBox", "dojo/domReady!", "glMatrix"],
+define(["exports", "app", "layout", "scene", "scenegraph", "shader", "raster", "framebuffer", "dojo", "dojo/html", "dojo/on", "dojo/dom", "dojo/dom-construct", "dojo/dom-style", "dojo/mouse", "dijit/form/Button", "dijit/form/ToggleButton", "dijit/form/Slider", "dijit/form/VerticalSlider", "dijit/form/HorizontalSlider", "dijit/form/TextBox", "dojo/domReady!", "glMatrix"],
 // Local parameters for required modules.
-function ui(exports, app, layout, scene, scenegraph, shader, dojo, html, on, dom, domConstruct, domStyle, mouse) {
+function ui(exports, app, layout, scene, scenegraph, shader, raster, framebuffer, dojo, html, on, dom, domConstruct, domStyle, mouse) {
 
 	// Transformation deltas for on step.
 	var delta = {
@@ -75,8 +75,8 @@ function ui(exports, app, layout, scene, scenegraph, shader, dojo, html, on, dom
 		//
 		//initDebugButtons();
 		initTransformationButtons();
-		initEffektButtons();
-		//initLightControls();
+		initEffectButtons();
+		initLightControls();
 		initMouseEvents();
 		intiHelpText();
 		// Do initial update.
@@ -95,6 +95,26 @@ function ui(exports, app, layout, scene, scenegraph, shader, dojo, html, on, dom
 		console.log(fkt);
 	}
 
+	// Animation button stuff
+	var minInterval = 5;
+	var animationInterval;
+	var animationRunning = false;
+	
+	function animateY()
+	{
+		animationRunning = true;
+		
+		getInteractNode()["rotate"]([0,0.05,0]);
+		app.start(false); // Wake up the animation-loop in case it is not running continuously.
+		
+		if(animationInterval > minInterval) // don't allow under 10 ms
+		{
+			setTimeout(animateY, animationInterval);
+		} else {
+			animationRunning = false;
+		}
+	}
+	
 	function initTransformationButtons() {
 		// Buttons for transformations: translate, rotate, scale.
 		for(var transform in delta) {
@@ -109,45 +129,148 @@ function ui(exports, app, layout, scene, scenegraph, shader, dojo, html, on, dom
 				}
 			}
 			br();
+			
+			if(transform == "rotate")
+			{
+				// animation
+				createSlider("y-rot-anim timer: ",
+					function(val)
+					{
+						animationInterval = val;
+						
+						if(!animationRunning)
+							animateY();
+					},
+					0, 500, 1, 0);
+			}
 		}
+
+		createButton("+zoom", function() {
+			var node = getInteractNode();
+			
+			// Check if we have a node to interact with.
+			if(node == null) {
+				console.log("Button: No interactive node.");
+				return;
+			}
+			
+			// Transform node.
+			node["scale"](vec3.create([0.1,0.1,0.1]));
+			
+			// Wake up the animation-loop in case it is not running continuously.
+			app.start(false);
+		}, false); 
+		
+		createButton("-zoom", function() {
+			var node = getInteractNode();
+			
+			// Check if we have a node to interact with.
+			if(node == null) {
+				console.log("Button: No interactive node.");
+				return;
+			}
+			
+			// Transform node.
+			node["scale"](vec3.create([-0.1,-0.1,-0.1]));
+			
+			// Wake up the animation-loop in case it is not running continuously.
+			app.start(false);
+		}, false); 
+		
+		br();
 		p();
 	}
 
-	function initEffektButtons() {
+	function initEffectButtons()
+	{
+		// Fullscreen
+		createButton("fullscreen", function() {
+			var elem = document.querySelector("#canvas");
+			if (elem.webkitRequestFullscreen) { // chrome
+				elem.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+			} else {
+				if (elem.mozRequestFullScreen) { // firefox
+					elem.mozRequestFullScreen();
+				} else { // opera
+					elem.requestFullscreen();
+				}
+			}
+		}, false);
+		br();
+		
+		// Debug Infos
+		createToggleButton("show debuginfos", scene.toggleShowDebugInfos, scene.getShowDebugInfos());
 		// Set polygon fill.
 		createToggleButton("wireframe", scene.toggleFill, ! scene.getFill());
 		// Toggle z-buffer debug.
 		createToggleButton("show z-buffer", scene.toggleDebugZBuffer, scene.getDebug_zBuffer());
+		// Toggle z-buffer debug.
+		createToggleButton("use plane equation", raster.togglePlaneEquation, raster.getPlaneEquation());
 		// Toggle debug normals.
 		createToggleButton("normals & edges", scene.toggleDebugNormals, scene.getDisplayNormals());
 		// Toggle triangulation.
 		createToggleButton("triangulation", scene.toggleTriangulation, scene.getDataIsTriangulated() );
+		// Toggle backface culling
+		createToggleButton("backface culling", shader.toggleBackFaceCulling, shader.getBackFaceCulling());
 	}
 	
-	function initLightControls() {
+	function initLightControls()
+	{
+		// Toggle light
+		createToggleButton("pointlight", scenegraph.togglePointLight, scenegraph.getPointLightOn());
+		
+		// Light X-Position
+		createSlider("light xpos: ", scenegraph.setLightPositionX, 0, 1000, 1, scenegraph.getLightPositionX());
+		
+		// Light Y-Position
+		createSlider("light ypos: ", scenegraph.setLightPositionY, 0, 1000, 1, scenegraph.getLightPositionY());
+
+		// Light Z-Position
+		createSlider("light zpos: ", scenegraph.setLightPositionZ, -1000, 1000, 1, scenegraph.getLightPositionZ());
+		
+		// Light intensity
+		createSlider("point light intensity: ", scenegraph.setPointLightIntensity, 0, 5, 1000, scenegraph.getPointLightIntensity());
+		
+		// Ambient light intensity
+		createSlider("ambient light intensity: ", scenegraph.setAmbientLightIntensity, 0, 1, 1000, scenegraph.getAmbientLightIntensity());
+		
+		// specular light intensity
+		createSlider("specular light intensity: ", scenegraph.setSpecularLightIntensity, 0, 1, 1000, scenegraph.getSpecularLightIntensity());
+		
+		// Shininess
+		createSlider("shininess: ", scenegraph.setShininess, 1, 64, 1, scenegraph.getShininess());
 	}
 	
 	/////////////////////// Controls helper functions ///////////////////////
 
-	function createLightPositionSlider(val, min, max, onChangeFct){
+	function createSlider(labelt, onChangeFct, min, max, vscale, val){
 		p();
 		var horizontalSliderNode = domConstruct.create('div', {}, controlsContainer);
-		label("light pos X: ", horizontalSliderNode);
-		var valX = text("xxx", horizontalSliderNode);
+		label(labelt, horizontalSliderNode);
+			
+		var startval = val;
+		starval = startval.toFixed(2) / 1;
+			
+		var valX = text("" + starval, horizontalSliderNode);
 		var horizontalSlider = new dijit.form.HorizontalSlider({
-			value : val,
-			minimum : min,
-			maximum : max,
+			value : val * vscale,
+			minimum : min * vscale,
+			maximum : max * vscale,
 			discreteValues : 1000,
 			intermediateChanges : true,
 			intermediateChanges : true,
-			style : "width:280px;",
-			onChange: function(value){
-				valX.innerHTML = Math.round( value );
-            }
-		}, horizontalSliderNode);
-		//horizontal.startup();
-
+			style : "width:250px;",
+			onChange: function(value)
+			{
+				value /= vscale;
+				value = value.toFixed(2) / 1;
+				
+				valX.innerHTML = value;
+				onChangeFct( value );
+			}
+		}, horizontalSliderNode).placeAt(controlsContainer);
+		
+		return horizontalSlider;
 	}
 
 	/**
@@ -161,12 +284,6 @@ function ui(exports, app, layout, scene, scenegraph, shader, dojo, html, on, dom
 			onClick : onClickFct
 		}).placeAt(controlsContainer);
 
-		// Button without dijit.
-		// button = domConstruct.create("button", {
-		// id : "toggleDebugZBuffer",
-		// innerHTML : "z-buffer"
-		// }, controlsContainer);
-		// on(button, "click", scene.toggleDebugZBuffer);
 		if(_br == true || _br == undefined) {
 			br();
 		}
@@ -217,7 +334,6 @@ function ui(exports, app, layout, scene, scenegraph, shader, dojo, html, on, dom
 		var label = domConstruct.create("label", {innerHTML:_text}, container);
 		return label;
 	}
-
 
 	/**
 	 * Adds a linebreak into the current flow of controls.

@@ -40,6 +40,18 @@ if(typeof Float32Array != 'undefined') {
  */
 var vec3 = {};
 
+// Speedup
+var Math_sin = Math.sin;
+var Math_asin = Math.asin;
+var Math_cos = Math.cos;
+var Math_acos = Math.acos;
+var Math_tan = Math.tan;
+var Math_atan = Math.atan;
+var Math_abs = Math.abs;
+var Math_sqrt = Math.sqrt;
+var Math_pow = Math.pow;
+var Math_PI = Math.PI;
+	
 /*
  * vec3.create
  * Creates a new instance of a vec3 using the default array type
@@ -181,6 +193,58 @@ vec3.scale = function(vec, val, dest) {
 };
 
 /*
+ * vec3.scalevec3
+ * Multiplies the components of a vec3 by a scalar value
+ *
+ * Params:
+ * vec - vec3 to scale
+ * val - vec3 to scale to scale by
+ * dest - Optional, vec3 receiving operation result. If not specified result is written to vec
+ *
+ * Returns:
+ * dest if specified, vec otherwise
+ */
+vec3.scalevec3 = function(vec, vec2, dest) {
+	if(!dest || vec2 == dest) {
+		vec[0] *= vec2[0];
+		vec[1] *= vec2[1];
+		vec[2] *= vec2[2];
+		return vec;
+	}
+	
+	dest[0] = vec[0]*vec2[0]
+	dest[1] = vec[1]*vec2[1]
+	dest[2] = vec[2]*vec2[2];
+	return dest;
+};
+
+/*
+ * vec3.scale
+ * Power of scalar value for each components of a vec3
+ *
+ * Params:
+ * vec - vec3 
+ * val - exponent
+ * dest - Optional, vec3 receiving operation result. If not specified result is written to vec
+ *
+ * Returns:
+ * dest if specified, vec otherwise
+ */
+vec3.pow = function(vec, val, dest) {
+	if(!dest || vec == dest) {
+		vec[0] = Math_pow(vec[0], val);
+		vec[1] = Math_pow(vec[1], val);
+		vec[2] = Math_pow(vec[2], val);
+		return vec;
+	}
+	
+	dest[0] = Math_pow(vec[0], val);
+	dest[1] = Math_pow(vec[1], val);
+	dest[2] = Math_pow(vec[2], val);
+	return dest;
+};
+
+/*
  * vec3.normalize
  * Generates a unit vector of the same direction as the provided vec3
  * If vector length is 0, returns [0, 0, 0]
@@ -196,7 +260,7 @@ vec3.normalize = function(vec, dest) {
 	if(!dest) { dest = vec; }
 	
 	var x = vec[0], y = vec[1], z = vec[2];
-	var len = Math.sqrt(x*x + y*y + z*z);
+	var len = Math_sqrt(x*x + y*y + z*z);
 	
 	if (!len) {
 		dest[0] = 0;
@@ -253,7 +317,7 @@ vec3.cross = function(vec, vec2, dest){
  */
 vec3.length = function(vec){
 	var x = vec[0], y = vec[1], z = vec[2];
-	return Math.sqrt(x*x + y*y + z*z);
+	return Math_sqrt(x*x + y*y + z*z);
 };
 
 /*
@@ -290,7 +354,7 @@ vec3.direction = function(vec, vec2, dest) {
 	var y = vec[1] - vec2[1];
 	var z = vec[2] - vec2[2];
 	
-	var len = Math.sqrt(x*x + y*y + z*z);
+	var len = Math_sqrt(x*x + y*y + z*z);
 	if (!len) { 
 		dest[0] = 0; 
 		dest[1] = 0; 
@@ -1060,7 +1124,7 @@ mat4.scale = function(mat, vec, dest) {
  */
 mat4.rotate = function(mat, angle, axis, dest) {
 	var x = axis[0], y = axis[1], z = axis[2];
-	var len = Math.sqrt(x*x + y*y + z*z);
+	var len = Math_sqrt(x*x + y*y + z*z);
 	if (!len) { return null; }
 	if (len != 1) {
 		len = 1 / len;
@@ -1069,8 +1133,8 @@ mat4.rotate = function(mat, angle, axis, dest) {
 		z *= len;
 	}
 	
-	var s = Math.sin(angle);
-	var c = Math.cos(angle);
+	var s = Math_sin(angle);
+	var c = Math_cos(angle);
 	var t = 1-c;
 	
 	// Cache the matrix values (makes for huge speed increases!)
@@ -1123,8 +1187,8 @@ mat4.rotate = function(mat, angle, axis, dest) {
  * dest if specified, mat otherwise
  */
 mat4.rotateX = function(mat, angle, dest) {
-	var s = Math.sin(angle);
-	var c = Math.cos(angle);
+	var s = Math_sin(angle);
+	var c = Math_cos(angle);
 	
 	// Cache the matrix values (makes for huge speed increases!)
 	var a10 = mat[4], a11 = mat[5], a12 = mat[6], a13 = mat[7];
@@ -1170,8 +1234,8 @@ mat4.rotateX = function(mat, angle, dest) {
  * dest if specified, mat otherwise
  */
 mat4.rotateY = function(mat, angle, dest) {
-	var s = Math.sin(angle);
-	var c = Math.cos(angle);
+	var s = Math_sin(angle);
+	var c = Math_cos(angle);
 	
 	// Cache the matrix values (makes for huge speed increases!)
 	var a00 = mat[0], a01 = mat[1], a02 = mat[2], a03 = mat[3];
@@ -1217,8 +1281,8 @@ mat4.rotateY = function(mat, angle, dest) {
  * dest if specified, mat otherwise
  */
 mat4.rotateZ = function(mat, angle, dest) {
-	var s = Math.sin(angle);
-	var c = Math.cos(angle);
+	var s = Math_sin(angle);
+	var c = Math_cos(angle);
 	
 	// Cache the matrix values (makes for huge speed increases!)
 	var a00 = mat[0], a01 = mat[1], a02 = mat[2], a03 = mat[3];
@@ -1303,7 +1367,7 @@ mat4.frustum = function(left, right, bottom, top, near, far, dest) {
  * dest if specified, a new mat4 otherwise
  */
 mat4.perspective = function(fovy, aspect, near, far, dest) {
-	var top = near*Math.tan(fovy*Math.PI / 360.0);
+	var top = near*Math_tan(fovy*Math_PI / 360.0);
 	var right = top*aspect;
 	return mat4.frustum(-right, right, -top, top, near, far, dest);
 };
@@ -1383,7 +1447,7 @@ mat4.lookAt = function(eye, center, up, dest) {
 	z2 = eyez - center[2];
 	
 	// normalize (no check needed for 0 because of early return)
-	len = 1/Math.sqrt(z0*z0 + z1*z1 + z2*z2);
+	len = 1/Math_sqrt(z0*z0 + z1*z1 + z2*z2);
 	z0 *= len;
 	z1 *= len;
 	z2 *= len;
@@ -1392,7 +1456,7 @@ mat4.lookAt = function(eye, center, up, dest) {
 	x0 = upy*z2 - upz*z1;
 	x1 = upz*z0 - upx*z2;
 	x2 = upx*z1 - upy*z0;
-	len = Math.sqrt(x0*x0 + x1*x1 + x2*x2);
+	len = Math_sqrt(x0*x0 + x1*x1 + x2*x2);
 	if (!len) {
 		x0 = 0;
 		x1 = 0;
@@ -1409,7 +1473,7 @@ mat4.lookAt = function(eye, center, up, dest) {
 	y1 = z2*x0 - z0*x2;
 	y2 = z0*x1 - z1*x0;
 	
-	len = Math.sqrt(y0*y0 + y1*y1 + y2*y2);
+	len = Math_sqrt(y0*y0 + y1*y1 + y2*y2);
 	if (!len) {
 		y0 = 0;
 		y1 = 0;
@@ -1524,13 +1588,13 @@ quat4.calculateW = function(quat, dest) {
 	var x = quat[0], y = quat[1], z = quat[2];
 
 	if(!dest || quat == dest) {
-		quat[3] = -Math.sqrt(Math.abs(1.0 - x*x - y*y - z*z));
+		quat[3] = -Math_sqrt(Math_abs(1.0 - x*x - y*y - z*z));
 		return quat;
 	}
 	dest[0] = x;
 	dest[1] = y;
 	dest[2] = z;
-	dest[3] = -Math.sqrt(Math.abs(1.0 - x*x - y*y - z*z));
+	dest[3] = -Math_sqrt(Math_abs(1.0 - x*x - y*y - z*z));
 	return dest;
 };
 
@@ -1571,7 +1635,7 @@ quat4.inverse = function(quat, dest) {
  */
 quat4.length = function(quat) {
 	var x = quat[0], y = quat[1], z = quat[2], w = quat[3];
-	return Math.sqrt(x*x + y*y + z*z + w*w);
+	return Math_sqrt(x*x + y*y + z*z + w*w);
 };
 
 /*
@@ -1590,7 +1654,7 @@ quat4.normalize = function(quat, dest) {
 	if(!dest) { dest = quat; }
 	
 	var x = quat[0], y = quat[1], z = quat[2], w = quat[3];
-	var len = Math.sqrt(x*x + y*y + z*z + w*w);
+	var len = Math_sqrt(x*x + y*y + z*z + w*w);
 	if(len == 0) {
 		dest[0] = 0;
 		dest[1] = 0;
@@ -1785,7 +1849,7 @@ quat4.slerp = function(quat, quat2, slerp, dest) {
     
 	var cosHalfTheta =  quat[0]*quat2[0] + quat[1]*quat2[1] + quat[2]*quat2[2] + quat[3]*quat2[3];
 	
-	if (Math.abs(cosHalfTheta) >= 1.0){
+	if (Math_abs(cosHalfTheta) >= 1.0){
 	    if(dest != quat) {
 		    dest[0] = quat[0];
 		    dest[1] = quat[1];
@@ -1795,10 +1859,10 @@ quat4.slerp = function(quat, quat2, slerp, dest) {
 		return dest;
 	}
 	
-	var halfTheta = Math.acos(cosHalfTheta);
-	var sinHalfTheta = Math.sqrt(1.0 - cosHalfTheta*cosHalfTheta);
+	var halfTheta = Math_acos(cosHalfTheta);
+	var sinHalfTheta = Math_sqrt(1.0 - cosHalfTheta*cosHalfTheta);
 
-	if (Math.abs(sinHalfTheta) < 0.001){
+	if (Math_abs(sinHalfTheta) < 0.001){
 		dest[0] = (quat[0]*0.5 + quat2[0]*0.5);
 		dest[1] = (quat[1]*0.5 + quat2[1]*0.5);
 		dest[2] = (quat[2]*0.5 + quat2[2]*0.5);
@@ -1806,8 +1870,8 @@ quat4.slerp = function(quat, quat2, slerp, dest) {
 		return dest;
 	}
 	
-	var ratioA = Math.sin((1 - slerp)*halfTheta) / sinHalfTheta;
-	var ratioB = Math.sin(slerp*halfTheta) / sinHalfTheta; 
+	var ratioA = Math_sin((1 - slerp)*halfTheta) / sinHalfTheta;
+	var ratioB = Math_sin(slerp*halfTheta) / sinHalfTheta; 
 	
 	dest[0] = (quat[0]*ratioA + quat2[0]*ratioB);
 	dest[1] = (quat[1]*ratioA + quat2[1]*ratioB);

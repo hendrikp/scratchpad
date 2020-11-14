@@ -10,7 +10,7 @@
  * @namespace cog1
  * @module model
  */
-define(["exports", "dojo", "data", "glMatrix"], function(exports, dojo, data) {
+define(["exports", "dojo", "data", "sampler", "glMatrix"], function(exports, dojo, data, sampler) {
 
 	// Set from default in scene, which is passed to data on initialization.
 	var triangulateDataOnInit;
@@ -94,7 +94,7 @@ define(["exports", "dojo", "data", "glMatrix"], function(exports, dojo, data) {
 		data.init.apply(_modelData);
 		_initTransformedVertrices.apply(this);
 		_initTransformedNormals.apply(this);
-		if(!triangulateDataOnInit) {
+		if(triangulateDataOnInit) {
 			this.toggleTriangulation();
 		}
 	}

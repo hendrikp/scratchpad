@@ -4,7 +4,7 @@
  * @namespace cog1
  * @module raster
  */
-define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], function(exports, dojo, shader, framebuffer, data) {
+define(["exports", "dojo", "shader", "framebuffer", "data", "scene", "glMatrix"], function(exports, dojo, shader, framebuffer, data, scene) {
 
 	// Drawing context for canvas.
 	// As raster uses the framebuffer to access the canvas,
@@ -16,7 +16,6 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 	var B = 1;
 	var C = 1;
 	var D = 1;
-	var AdivC;
 	// Pre-calculate for speed-up.
 
 	// For each polygon we store all points from all edges
@@ -25,43 +24,82 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 	// After processing a polygon the data structures are reset.
 	// One ArrayList for every scan-line.
 	var scanlineIntersection = [];
+	
+	// Switchable Z-Buffer calculation
+	var planeEquation = false;
+	var dummyFunc = function() {};
+	var dummyFuncTrue = function() {return true;};	
+	var getZ = dummyFunc;
+	var calcPlaneEquationForStraightLine = dummyFuncTrue;
+	var calcPlaneEquation = dummyFuncTrue;
+	
+	function togglePlaneEquation()
+	{
+		planeEquation = !planeEquation;
+		
+		if(planeEquation == true)
+		{
+			getZ = getZ_PE;
+			calcPlaneEquationForStraightLine = calcPlaneEquationForStraightLine_PE;
+			calcPlaneEquation = calcPlaneEquation_PE;
+		}
+		else
+		{
+			getZ = getZ_LERP;
+			calcPlaneEquationForStraightLine = dummyFuncTrue;
+			calcPlaneEquation = dummyFuncTrue;
+		}
+		
+		scene.setUpToDate(false);
+	}
+	exports.togglePlaneEquation = togglePlaneEquation;
+	
+	function getPlaneEquation() {
+		return planeEquation;
+	}
+	exports.getPlaneEquation = getPlaneEquation;
 
 	function init(_ctx, _bgColor) {
 		ctx = _ctx;
 		framebuffer.init(ctx, _bgColor);
 	}
 
-	/*
-	 * Convienence function when start and end points are given as 3D-vectors.
-	 */
-	function drawLineBresenhamGivenStartEndPoint(ctx, startPoint, endPoint, color, storeIntersectionForScanlineFill) {
-
-		// Convert parameters to integer values.
-		var startX = Math.floor(startPoint[0]);
-		var startY = Math.floor(startPoint[1]);
-		var endX = Math.floor(endPoint[0]);
-		var endY = Math.floor(endPoint[1]);
-
-		drawLineBresenham(ctx, startX, startY, endX, endY, color, storeIntersectionForScanlineFill);
-	}
-
+	// SPEEDUP
+	var framebuffersetFast = framebuffer.setFast;
+	var framebuffersetDirtyPoint = framebuffer.setDirtyPoint;
+	
 	/*
 	 * Draw lines with bresenham algorithm.
 	 * Also store intersections of the current edge for scanline.
-	 * @ Start and end points should be integer values.
-	 * @ parameter storeIntersectionForScanlineFill: if false edges are only calculated
-	 * @ to be filled with scanline but not drawn.
+	 * @ Start and end points will be converted to integer values.
+	 * @ param storeIntersectionForScanlineFill: if false edges are only calculated to be filled with scanline but not drawn.
+	 * @ param
 	 */
-	function drawLineBresenham(ctx, startX, startY, endX, endY, color, storeIntersectionForScanlineFill) {
+	function drawLineBresenham(ctx, start, end, color, storeIntersectionForScanlineFill) {
+		if(!isFinite(start[0]) || !isFinite(end[0])|| !isFinite(start[0])|| !isFinite(end[0]))
+			return;
+		
+		//if(startX < 0|| endX < 0 || startY < 0|| endY < 0)
+		//	return;
+		//if(startX > framebuffer.width|| endX > framebuffer.width || startY > framebuffer.height || endY > framebuffer.height)
+		//	return;
 
-		if(!isFinite(startX) || !isFinite(endX)|| !isFinite(startY)|| !isFinite(endY))
-			return;
+		// clipping hack
+		if(start[0] < 0) start[0] = 0;
+		if(end[0] < 0) end[0] = 0;
+		if(start[1] < 0) start[1] = 0;
+		if(end[1] < 0) end[1] = 0;
 		
-		if(startX < 0|| endX < 0 || startY < 0|| endY < 0)
-			return;
+		if(start[0]  > framebuffer.width) start[0]  = framebuffer.width;
+		if(end[0] > framebuffer.width) end[0] = framebuffer.width;
+		if(start[1] > framebuffer.height) start[1] = framebuffer.height;
+		if(end[1] > framebuffer.height) end[1] = framebuffer.height;
 		
-		if(startX > framebuffer.width|| endX > framebuffer.width || startY > framebuffer.height || endY > framebuffer.height)
-			return;
+		for(var i = 0; i < 2; ++i)
+		{ // z doesnt need to be floored
+			start[i] = start[i] << 0;
+			end[i] = end[i] << 0;
+		}
 		
 		// Set default color black.
 		if(color == undefined) {
@@ -70,30 +108,38 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 		var rgba = color.rgbaShaded;
 
 		// Variables for the loops.
-		var x = startX;
-		var y = startY;
-
-		var dX = endX - startX;
-		var dY = endY - startY;
+		var x = start[0];
+		var y = start[1];
+		var z = start[2];
+		var endX = end[0];
+		var endY = end[1];
+		
+		var dX = end[0] - start[0];
+		var dY = end[1] - start[1];
 		var dXSign = dX >= 0 ? 1 : -1;
-
+		var dXAbs = Math.abs(dX);
+		var zStep = (end[2] - start[2]) / dXAbs;
+		
+		// Speedup
+		var shadeFunc = shader.getShadingFunction();
+		
 		// speedup for scanline
 		if(dY == 0)
 		{
-			framebuffer.setDirtyPoint(x, y);
-			framebuffer.setFast(x, y, getZ(x,y), rgba);
+			framebuffersetDirtyPoint(x, y);
+			framebuffersetFast(x, y, z, shadeFunc(x,y,z,rgba));
 			while(x != endX)
 			{
 				x += dXSign;
-				framebuffer.setFast(x, y, getZ(x,y), rgba);
+				z = getZ(x, y, z, zStep);
+				framebuffersetFast(x, y, z, shadeFunc(x,y,z,rgba));
 			}
-			framebuffer.setDirtyPoint(endX, endY);
+			framebuffersetDirtyPoint(endX, endY);
 			return;
 		}
 		
 		var e;
 		var dYSign = dY >= 0 ? 1 : -1;
-		var dXAbs = Math.abs(dX);
 		var dYAbs = Math.abs(dY);
 
 		// shortcuts for speedup.
@@ -103,14 +149,15 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 		var dYdXdiff2 = 2 * (dYAbs - dXAbs);
 
 		// BEGIN exercise Bresenham
-		framebuffer.setDirtyPoint(x,y);
-		framebuffer.setFast(x, y, getZ(x,y), rgba);
+		framebuffersetDirtyPoint(x, y);
+		framebuffersetFast(x, y, z, shadeFunc(x,y,z,rgba));
 		
 		storeIntersectionForScanlineFill = storeIntersectionForScanlineFill && dYAbs > 0; // no horizontal lines
 		
 		if ( dXAbs >= dYAbs )
 		{
 			e = dXAbs - dYAbs2;
+			
 			while(x != endX)
 			{
 				x += dXSign;
@@ -118,19 +165,23 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 				if(e > 0)
 				{
 					e -= dYAbs2;
+					z = getZ(x, y, z, zStep);
 				} else {
 					e += dXdYdiff2;
 					y += dYSign;
+					z = getZ(x, y, z, zStep);
 					
 					if(storeIntersectionForScanlineFill && y != endY)
-						addIntersection(x, y);
+						addIntersection([x, y, z]);
 				}
 
-				framebuffer.setFast(x, y, getZ(x,y), rgba);
+				framebuffersetFast(x, y, z, shadeFunc(x,y,z,rgba));
 			}
 		} else
 		{
 			e = dYAbs - dXAbs2;
+			zStep = (end[2] - start[2]) / dYAbs;
+			
 			while(y != endY)
 			{
 				y += dYSign;
@@ -143,14 +194,15 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 					x += dXSign;
 				}
 				
-				framebuffer.setFast(x, y, getZ(x,y), rgba);
+				z = getZ(x, y, z, zStep);
+				framebuffersetFast(x, y, z, shadeFunc(x,y,z,rgba));
 				
 				if(storeIntersectionForScanlineFill && y != endY)
-					addIntersection(x, y);
+					addIntersection([x, y, z]);
 			}
 		}
 		
-		framebuffer.setDirtyPoint(x,y);
+		framebuffersetDirtyPoint(x, y);
 		
 		// Overwrite this function
 		// not using drawLine().Thus comment out the next line.
@@ -158,10 +210,12 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 		return;
 	};
 
+	var numsortx = function(a,b){return a[1]-b[1]};
+	
 	/*
 	 * Fill a polygone into the frambuffer
-	 * @parametes fill or stroke outline
-	 * @parametes ctx is given for debug
+	 * @param fill or stroke outline
+	 * @param ctx is given for debug
 	 */
 	function scanlineDrawPolygon(ctx, vertices, polygon, color, fill) {
 
@@ -176,104 +230,112 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 
 		// Calculate the plane in which the polygon lies
 		// to determine z-values of intermediate points.
-		calcPlaneEquation(vertices, polygon);
-
-		// Convert parameters to integer values.
-		var startPoint = vertices[polygon[polygon.length-1]];
-		var nextIndex = 0;
-		var endPoint = vertices[polygon[nextIndex]];
-		var currX = Math.floor(startPoint[0]);
-		var currY = Math.floor(startPoint[1]);
-		var nextX = Math.floor(endPoint[0]);
-		var nextY = Math.floor(endPoint[1]);
-
-		var derivative = calcDerivative(currY, nextY);
-		
-		// Calculate first derivative
-		if(derivative == 0)
+		if( calcPlaneEquation(vertices, polygon) )
 		{
-			for(var v = polygon.length-1; v >= 0; --v)
-			{
-				// Convert parameters to integer values.
-				startPoint = vertices[polygon[v]];
-				// Connect edge to next or to first vertex to close the polygon.
-				nextIndex = (v < polygon.length - 1) ? v + 1 : 0;
-				endPoint = vertices[polygon[nextIndex]];
-				currY = Math.floor(startPoint[1]);
-				nextY = Math.floor(endPoint[1]);
-				
-				derivative = calcDerivative(currY, nextY);
-				
-				if(derivative != 0)
-					break;
-			}
-		}
-		
-		var lastDerivative = derivative;
-		
-		//console.log("y" + currY + "derivative:"+derivative+" lastDerivative "+lastDerivative); //debug.
-		
-		// Loop over vertices/edges in polygon.
-		for(var v = 0; v < polygon.length; v++) {
+
 			// Convert parameters to integer values.
-			startPoint = vertices[polygon[v]];
-			// Connect edge to next or to first vertex to close the polygon.
-			nextIndex = (v < polygon.length - 1) ? v + 1 : 0;
-			endPoint = vertices[polygon[nextIndex]];
-			currX = Math.floor(startPoint[0]);
-			currY = Math.floor(startPoint[1]);
-			nextX = Math.floor(endPoint[0]);
-			nextY = Math.floor(endPoint[1]);
+			var start = vertices[polygon[polygon.length-1]];
+			var nextIndex = 0;
+			var end = vertices[polygon[nextIndex]];
+			
+			for(var i = 0; i < 2; ++i)
+			{ // z doesnt need to be floored
+				start[i] = start[i] << 0;
+				end[i] = end[i] << 0;
+			}
 
-			drawLineBresenham(ctx, currX, currY, nextX, nextY, color, fill);
+			var derivative = calcDerivative(start[1], end[1]);
 			
-			if(!fill) {
-				continue;
-			}
-			
-			// BEGIN exercise Scanline
-
-			// Calculate current and save last derivative.
-			lastDerivative = derivative;
-			derivative = calcDerivative(currY, nextY);
-			//console.log("y" + currY + "derivative:"+derivative+" lastDerivative "+lastDerivative); //debug.
-			
-			// Add start point if edges are non monotonous.
-			if(derivative != 0 && derivative != lastDerivative)
-			{
-				addIntersection(currX, currY);
-			}
-			
-			// Add end point of non horizontal edges.
-			if(currY != nextY)
-			{
-				addIntersection(nextX, nextY);
-			}
-			
-			// If current derivative ==0 then keep the last one that was not 0 as last.
+			// Calculate first derivative
 			if(derivative == 0)
 			{
-				derivative = lastDerivative;
+				for(var v = polygon.length-1; v >= 0; --v)
+				{
+					// Convert parameters to integer values.
+					start = vertices[polygon[v]];
+					// Connect edge to next or to first vertex to close the polygon.
+					nextIndex = (v < polygon.length - 1) ? v + 1 : 0;
+					end = vertices[polygon[nextIndex]];
+					
+					for(var i = 0; i < 2; ++i)
+					{ // z doesnt need to be floored
+						start[i] = start[i] << 0;
+						end[i] = end[i] << 0;
+					}
+					
+					derivative = calcDerivative(start[1], end[1]);
+					
+					if(derivative != 0)
+						break;
+				}
 			}
-		}
+			
+			var lastDerivative = derivative;
+			
+			//console.log("y" + currY + "derivative:"+derivative+" lastDerivative "+lastDerivative); //debug.
+			
+			// Loop over vertices/edges in polygon.
+			for(var v = 0; v < polygon.length; v++) {
+				// Convert parameters to integer values.
+				start = vertices[polygon[v]];
+				// Connect edge to next or to first vertex to close the polygon.
+				nextIndex = (v < polygon.length - 1) ? v + 1 : 0;
+				end = vertices[polygon[nextIndex]];
+				for(var i = 0; i < 2; ++i)
+				{ // z doesnt need to be floored
+					start[i] = start[i] << 0;
+					end[i] = end[i] << 0;
+				}
 
-		if(!fill)
-		{
-			return;
-		}
-		
-		// Fill polygon line by line using the scan-line algorithm.
-		// Loop over scan lines.
-		var numsort = function(a,b){return a-b};
-		for(var y = 0; y < ctx.height; y++)
-		{
-			if(dojo.isArray(scanlineIntersection[y]))
+				drawLineBresenham(ctx, start, end, color, fill);
+				
+				if(!fill) {
+					continue;
+				}
+				
+				// BEGIN exercise Scanline
+
+				// Calculate current and save last derivative.
+				lastDerivative = derivative;
+				derivative = calcDerivative(start[1], end[1]);
+				//console.log("y" + currY + "derivative:"+derivative+" lastDerivative "+lastDerivative); //debug.
+				
+				// Add start point if edges are non monotonous.
+				if(derivative != 0 && derivative != lastDerivative)
+				{
+					addIntersection(start);
+				}
+				
+				// Add end point of non horizontal edges.
+				if(start[1] != end[1])
+				{
+					addIntersection(end);
+				}
+				
+				// If current derivative ==0 then keep the last one that was not 0 as last.
+				if(derivative == 0)
+				{
+					derivative = lastDerivative;
+				}
+			}
+
+			if(!fill)
 			{
-				scanlineIntersection[y].sort(numsort);
+				return;
+			}
+			
+			// Fill polygon line by line using the scan-line algorithm.
+			// Loop over scan lines.
+			for(var y = 0; y < ctx.height; y++)
+			{
+				if(dojo.isArray(scanlineIntersection[y]))
+				{
+					scanlineIntersection[y].sort(numsortx);
 
-				for(var ix = 0; ix < scanlineIntersection[y].length-1; ix+=2)
-				{					
-					drawLineBresenham(ctx, scanlineIntersection[y][ix], y, scanlineIntersection[y][ix+1], y, color, false);
+					for(var ix = 0; ix < scanlineIntersection[y].length-1; ix+=2)
+					{					
+						drawLineBresenham(ctx, scanlineIntersection[y][ix], scanlineIntersection[y][ix+1], color, false);
+					}
 				}
 			}
 		}
@@ -293,50 +355,67 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 			return 0;
 		}
 	}
-
+	
 	/*
 	 * Used for drawing lines with correct z-buffering.
 	 * Invent a second direction n perpendicular to direction
 	 * and create a fake plane.
 	 */
-	function calcPlaneEquationForStraightLine(point, direction) {
+	function calcPlaneEquationForStraightLine_PE(point, direction) {
 		var d = direction;
-		var n = vec3.create();
 		// Calculate n via a second direction.
-		//var d1 = vec3.create();
+		//var d1 = [];
 		//vec3.set([d[2],d[1],d[0]],d1);
 		//vec3.cross(d, d1, n);
 		// Set directly some n perpendicular to d.
-		vec3.set([d[1], -d[0], -d[2]], n);
+		var n = [d[1], -d[0], -d[2]];
 		vec3.normalize(n);
 		A = n[0];
 		B = n[1];
 		C = n[2];
 		D = -vec3.dot(n, point);
-		AdivC = 0;
+		
+		return true;
 	}
-
-	function calcPlaneEquation(vertices, polygon) {
+	
+	function calcPlaneEquation_PE(vertices, polygon) {
 
 		// Normal vector and its length.
-		var n = vec3.create();
+		var n = [];
+		
+		// Since points are used in bresenheim x,y integer precision is used
+		for(var i = 0; i < vertices.length; ++i)
+		{ // z doesnt need to be floored
+			vertices[i][0] = vertices[i][0] <<0;
+			vertices[i][1] = vertices[i][1] <<0;
+		}
+		
 		var nLength = data.calculateNormalForPolygon(vertices, polygon, n);
 
 		if(nLength == 0) {
-			return;
+			console.error("calcPlaneEquation: zero vector");
+			A = B = C = D = 1;
+			return false;
 		}
 
 		// BEGIN exercise z-Buffer:
 
+		// Don't draw this polygon as it is almost perpendicular to viewdirection (screen/camera)
+		if(Math.abs(n[2]) <= 0.01)
+			return false;
+		
 		// Assign parameters for plane equation.
+		A = n[0];
+		B = n[1];
+		C = n[2];
 
 		// Project first vertex (could be any) on normal.
 		// The result is the distance D of polygon plane to origin.
+		D = -vec3.dot(n, vertices[polygon[0]]);
+				
+		//console.log("Plane: A="+A+" B="+B+" C="+C+" D="+D+ " Len="+nLength+" A/C="+A/C); // debug
 
-		//console.log("Plane: A="+format.format(A)+" B="+format.format(B)+" C="+format.format(C)+" D="+format.format(D)+
-		//			"   nLength="+nLength+"    A/C="+A/C); // debug
-		
-		
+		return true;
 		// END exercise z-Buffer
 	}
 
@@ -350,40 +429,30 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 	/*
 	 * Add (edge-)points from bresenham to scanlines.
 	 */
-	function addIntersection(x, y) {
-
-		// Do some hacked clipping.
-		// point out of y-range are on no scanline and can be ignored.
-		if(y < 0 || y >= ctx.height) {
-			return;
-		}
-		// Slide point to the left or right of the canvas back onto the edge,
-		// but not on the canvas. They are cut off by the framebuffer if this
-		// leads to a mere artifact (vertical lines at the left or right edge).
-		if(x < 0) {
-			x = -1;
-		}
-		if(x >= ctx.width) {
-			x = ctx.width;
-		}
-
+	function addIntersection(p) {
+		var y = p[1];
+		
 		// Check if this is the first point in this scanline.
-		if(!dojo.isArray(scanlineIntersection[y])) {
+		if(!dojo.isArray(scanlineIntersection[ y ])) {
 			scanlineIntersection[y] = [];
 		}
-		scanlineIntersection[y].push(x);
+		scanlineIntersection[y].push(p);
 	}
 
 	/*
 	 * Calculate the z-value for any point on
 	 * the polygon currently processed.
 	 */
-	function getZ(x, y) {
-		// We assume that the plane equation is up-to-date
-		// with the current polygon.
+	function getZ_PE(x, y, z, zStep) {
+		// We assume that the plane equation is up-to-date with the current polygon.	
 		return -(A * x + B * y + D) / C;
 	}
-
+	
+	function getZ_LERP(x, y, z, zStep) {
+		return z + zStep;
+	}
+	getZ = getZ_LERP;
+	
 	/*
 	 * For Debug
 	 */
@@ -401,7 +470,6 @@ define(["exports", "dojo", "shader", "framebuffer", "data", "glMatrix"], functio
 	// Public API.
 	exports.init = init;
 	exports.drawLineBresenham = drawLineBresenham;
-	exports.drawLineBresenhamGivenStartEndPoint = drawLineBresenhamGivenStartEndPoint;
 	exports.calcPlaneEquationForStraightLine = calcPlaneEquationForStraightLine;
 	exports.scanlineDrawPolygon = scanlineDrawPolygon;
 	exports.clearIntersections = clearIntersections;

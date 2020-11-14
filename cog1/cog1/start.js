@@ -61,6 +61,8 @@ require(["dojo", "dojo/parser", "dojo/domReady!"], function(dojo) {
 			["framebuffer","cog1/framebuffer"],
 			// data for models
 			["data","cog1/modelData/data"],
+			// sampler for textures
+			["sampler","cog1/sampler"],
 			// external (ext)
 			["glMatrix","cog1/ext/glMatrix.js"]
 		]

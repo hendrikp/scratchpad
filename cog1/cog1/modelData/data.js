@@ -40,8 +40,12 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 		{magenta : [255, 0, 255, 255]},
 		{yellow : [255, 255,0, 255]},
 		{black : [0, 0, 0, 255]},
+		{white : [255, 255, 255, 255]},
+		{grey : [128, 128, 128, 255]},
+		{light_blue : [128, 255, 255, 255]}
 	];
-	// Texture coordinates.
+		
+	// Texture coordinates. (for each vertex)
 	var textureCoord = [];
 	
 	// All of the above array-data can be combined to polygons
@@ -64,8 +68,6 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 	// One normal for each polygon (with the same index).
 	// Given or calculated from the mesh or from vertexNormals.
 	var polygonNormals = [];
-	// Texture coordinates for each vertex of the polygon.
-	var polygonTextureCoord = [];
 
 	/////////////////////////////////////////////////////////////////
 	// Variable that do not refer to the model-data.
@@ -74,17 +76,17 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 	// If the some data/model is uses several times in the 
 	// scene init should be run only for the fist instance.
 	var intiDone = false;
+	var epsilon  = 0.001;
 	
 	/////////////////////////////////////////////////////////////////
 	// Functions that work on the data.
 	/////////////////////////////////////////////////////////////////
-
 	/**
 	 * Calculate normals, if not given.
 	 * Init is applied to model data.
 	 */
-	 function init(){		
-	 	
+	function init(){		
+	
 	 	if(this.initDone == true){
 	 		return;
 	 	}
@@ -105,18 +107,20 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 			}			 
 		}
 		
-		// Triangulate data and keep results,
-		// but if default in scene is false then it will be toggled
-		// back or original data by the model.
-		triangulate.apply(this);
+		// merge doubled vertices
+		//mergeVertices.apply(this);
 		
 		if(this.polygonNormals.length == 0) {
 			calcuatePolygonNormalsFromMesh.apply(this);
 		}
+		
 		if(this.vertexNormals.length == 0) {
 			calcuateVertexNormalsFromPolygonNormals.apply(this);
 		}
 		
+		// Triangulate data and keep results,
+		triangulate.apply(this);
+	
 		augmentColorObjecstWithColornameAndRgba.apply(this);
 		
 		// If the some data/modle is uses severl times in the 
@@ -146,12 +150,11 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 	 */
 	function vectorsEqual(vec1, vec2) {
 		for(var i = 0, len = vec1.length; i < len; i++) {
-			if(vec1[i] != vec2[i]){ return false; }
+			if(Math.abs(vec1[i]-vec2[i]) > epsilon){ return false; }
 		}
 		return true;
 	}
 	
-
 	/**
 	 * Use the cross product of the edge vectors.
 	 * The order of the vertices determines the sign of the normal.
@@ -174,7 +177,8 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 	 * The weight of the angle at the vertex is used as weight.
 	 * No check if calculation has been already done.
 	 */
-	function calcuateVertexNormalsFromPolygonNormals(){
+	function calcuateVertexNormalsFromPolygonNormals()
+	{
 		// Polygon normals must be calculated first.
 		if(this.polygonNormals.length == 0) {
 			calcuatePolygonNormalsFromMesh.apply(this);
@@ -186,22 +190,61 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 		for(var v = 0; v < this.vertices.length; v++) {
 			this.vertexNormals[v] = [0,0,0];
 		}
+		
 		// Loop over polygons.
 		for(var p = 0; p < this.polygonVertices.length; p++) {
 			var polygon = this.polygonVertices[p];
+			
 			// Loop over vertices of polygon.
 			for(var v = 0; v < polygon.length; v++) {
 				// Accumulate/add all polygon normals.
-				vec3.add(this.vertexNormals[polygon[v]], this.polygonNormals[p]); 				
+				if(polygon[v] < this.vertexNormals.length)
+					vec3.add(this.vertexNormals[polygon[v]], this.polygonNormals[p]);
+				else
+					console.log('Error: calcuateVertexNormalsFromPolygonNormals invalid index', polygon[v]);
 			}
 		}
+		
+		// smooth verices (cleanData)
+		var vdone = [];
+		for(var v = 0; v < this.vertexNormals.length; v++) {
+			
+			if(vdone[v] != true)
+			{
+				var fequals = [];
+				var vresult = vec3.set(this.vertexNormals[v], []);
+				
+				// find equal verts
+				for(var vf = v+1; vf < this.vertexNormals.length; vf++)
+				{
+					if(vectorsEqual(this.vertices[vf], this.vertices[v]))
+					{
+						vec3.add(vresult, this.vertexNormals[vf]);
+						vdone[vf] = true;
+						fequals.push(vf);
+					}
+				}
+				
+				// set results
+				this.vertexNormals[v] = vresult;
+				for(var vf = 0; vf < fequals.length; vf++)
+				{
+					this.vertexNormals[fequals[vf]] = vresult;
+				}
+			}
+		}
+		
 		// Normalize normals.
 		for(var v = 0; v < this.vertexNormals.length; v++) {
 			vec3.normalize(this.vertexNormals[v]);
-		}		
+		}
 
 		// END exercise vertex-normals
-
+	}
+	
+	function isZero(val)
+	{
+		return epsilon > Math.abs(val);
 	}
 	
 	/**
@@ -216,36 +259,56 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 	 */
 	function calculateNormalForPolygon(vertices, polygon, n){
 		
-		if(n == null){
-			console.log("Error: Parameter normal n is null.");
+		if(n == null || polygon == null){
+			console.log("Error: calculateNormalForPolygon Parameter is null.");
+			return 0;
 		}
-
+		
+		if (polygon.length < 3) {
+			console.log('Error: calculateNormalForPolygon not enough vertices ', polygon.length);
+			return 0;
+		}
+		
 		// START exercise z-Buffer:
 		
 		// Calculate normal vector from vector product of edges.
+		var origin = vec3.create(vertices[polygon[0]]);
+		var U = vec3.subtract(vec3.create(vertices[polygon[1]]), origin);
+		var V = vec3.subtract(vec3.create(vertices[polygon[2]]), origin);
+
+		// Calculate normal
+		vec3.cross(U, V, n);
+
 		// Check that e[u] are not parallel.
+		if(isZero(n[0]) && isZero(n[1]) && isZero(n[2]))
+		{
+			console.error("calcPlaneEquation: zero vector" + n);
+			return 0;
+		}
 		
-		//return nLength;
-		// Comment this out.
-		return [0,0,0];
+		vec3.normalize(n);
+		
+		return vec3.length(n);
 
 		// END exercise z-Buffer
-
 	}
 	
 	/**
-	 * Create triangle fans (123, 134, 145, ...)
-	 * from polygons.
+	 * Create triangle fans (123, 134, 145, ...) from polygons.
 	 */
 	function triangulate(){
-		// Create new array for the triangles and colors, 
-		// but keep all polygon data.
+		// Create new array for the triangles and colors,  but keep all polygon data.
 		this.triangles = [];
 		this.orgPolygonVertices = this.polygonVertices;
 		this.triangleColors = [];
 		this.orgPolygonColors = this.polygonColors;
+		this.triangleVertexNormals = [];
+		this.orgVertexNormals = this.vertexNormals;
+		this.trianglePolygonNormals = [];
+		this.orgPolygonNormals = this.polygonNormals;
 		
-		var nbTris = 0;		
+		var nbTris = 0;
+		
 		// Loop over polygons.
 		for(var p = 0; p < this.polygonVertices.length; p++) {
 			var polygon = this.polygonVertices[p];
@@ -259,11 +322,52 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 				this.triangles[nbTris] = [firstVertex, polygon[v], polygon[v+1]];
 				this.triangleColors.push(this.polygonColors[p]);
 				nbTris++;
-			}		
+			}
 		}
+		
+		// calculate normals
+		this.vertexNormals = this.triangleVertexNormals;
+		this.polygonNormals = this.trianglePolygonNormals;
+		calcuateVertexNormalsFromPolygonNormals.apply(this);
+		this.vertexNormals = this.orgVertexNormals;
+		this.polygonNormals = this.orgPolygonNormals;
+		
 		// Set triangles a new polygons.
-		this.polygonVertices = this.triangles;
-		this.polygonColors = this.triangleColors;
+		//this.polygonVertices = this.triangles;
+		//this.polygonColors = this.triangleColors;
+	}
+	
+	/*
+	* clean up doubled vertices to smooth normals
+	*/
+	function mergeVertices() {
+		var vdone = [];
+		for(var v = 0; v < this.vertices.length; v++) {
+			
+			if(vdone[v] != true)
+			{
+				// find equal verts
+				for(var vf = v+1; vf < this.vertices.length; vf++)
+				{
+					if(vectorsEqual(this.vertices[vf], this.vertices[v]))
+					{
+						vdone[vf] = true;
+						this.vertices[vf] = [0,0,0];
+						
+						// loop over polygons
+						for(var p = 0; p < this.polygonVertices.length; p++) {
+							// Loop over vertices of polygon.
+							for(var pv = 0; pv < this.polygonVertices[p].length; pv++) {
+								if(vf == this.polygonVertices[p][pv])
+								{
+									this.polygonVertices[p][pv] = v;
+								}
+							}		
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	function isTriangulated(){
@@ -277,24 +381,29 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 		if(isTriangulated.apply(this)){
 			// Set original polygons a new polygons.
 			this.polygonVertices = this.orgPolygonVertices;
-			this.polygonColors = this.orgPolygonColors;			
+			this.polygonColors = this.orgPolygonColors;
+			this.vertexNormals = this.orgVertexNormals;
+			this.polygonNormals = this.orgPolygonNormals;
 		} else {
 			// Set triangles a new polygons.
 			this.polygonVertices = this.triangles;
-			this.polygonColors = this.triangleColors;			
+			this.polygonColors = this.triangleColors;
+			this.vertexNormals = this.triangleVertexNormals;
+			this.polygonNormals = this.trianglePolygonNormals;
 		}
 		// Re.calculate normals.
-		this.vertexNormals = [];
-		this.polygonNormals = [];
-		calcuateVertexNormalsFromPolygonNormals.apply(this);
+		//this.vertexNormals = [];
+		//this.polygonNormals = [];
+		//calcuateVertexNormalsFromPolygonNormals.apply(this);
 	}
 	
 	// Public API.
 	exports.init = init;	
-	exports.calculateNormalForPolygon = calculateNormalForPolygon;	
+	exports.calculateNormalForPolygon = calculateNormalForPolygon;
 	exports.isTriangulated = isTriangulated;
 	exports.toggleTriangulation = toggleTriangulation;
 	exports.augmentColorObjecstWithColornameAndRgba = augmentColorObjecstWithColornameAndRgba;
+	
 	// Public data.
 	exports.vertices = vertices;
 	exports.colors = colors;
@@ -303,5 +412,4 @@ define(["exports", "data", "glMatrix"], function(data, exports) {
 	exports.polygonColors = polygonColors;
 	exports.vertexNormals = vertexNormals;
 	exports.polygonNormals = polygonNormals;
-	exports.polygonTextureCoord = polygonTextureCoord;
 });

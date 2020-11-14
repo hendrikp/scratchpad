@@ -3,7 +3,7 @@
  * @namespace cog1
  * @module scene
  */
-define(["exports", "dojo", "model", "node", "shader"], function(exports, dojo, model, node, shader) {
+define(["exports", "dojo", "model", "node", "shader", "scene"], function(exports, dojo, model, node, shader, scene) {
 
 	// Contains the scene-graph, a tree of
 	// nodes (a model with a transform) in the scene.
@@ -11,12 +11,16 @@ define(["exports", "dojo", "model", "node", "shader"], function(exports, dojo, m
 
 	// There may be ambient light and
 	// one white point-light in the scene.
-	var ambientLigthIntensity = 0.2;
-	var pointLigthIntensity = 1.0;
+	var ambientLightIntensity = 0.3;
+	var pointLightIntensity = 1.0;
+
+	var specularLightIntensity = 0.75;
+	var shininess = 8;
+	
 	// The light position does not get transformed or
 	// projected. It has to be set in respect to the
 	// screen coordinates.
-	var pointLigthPosition = [100, 100, 100];
+	var pointLightPosition = [100, 100, 100];
 	var pointLightOn = true;	
 
 	/*
@@ -47,36 +51,91 @@ define(["exports", "dojo", "model", "node", "shader"], function(exports, dojo, m
 	/*
 	 * @parameter LI are positive floats, pointPos is a vec3.
 	 */
-	function setLights(ambientLI, pointLI, pointPos) {
-		ambientLigthIntensity = ambientLI;
-		pointLigthIntensity = pointLI;
-		pointLigthPosition = pointPos;
+	function setLights(ambientLI, pointLI, pointPos, specLI, shine) {
+		ambientLightIntensity = ambientLI;
+		pointLightIntensity = pointLI;
+		pointLightPosition = pointPos;
+		specularLightIntensity = specLI;
+		shininess = shine;
+		
 		// Store values also in the shader for speed-up.
-		shader.setLights(ambientLI, pointLI, pointPos);
+		shader.setLights(ambientLI, (pointLightOn ? pointLI : 0), pointPos, (pointLightOn ? specLI : 0), shine);
 	}
 
 	function togglePointLight() {
-		if(pointLightOn) {
-			pointLightOn = false;
-			pointLightIntensity = 0.0
-		} else {
-			pointLightOn = true;
-			pointLightIntensity = scenegraph.getPointLightIntensity();
-		}
+		pointLightOn = !pointLightOn;
+		setLights(ambientLightIntensity, pointLightIntensity, pointLightPosition, specularLightIntensity, shininess);
+		scene.setUpToDate(false);
 	}
 
-	function getLightPosition() {
-		return pointLigthPosition;
+	function getPointLightOn()
+	{
+		return pointLightOn;
 	}
-
+	
+	function getLightPositionX() {
+		return pointLightPosition[0];
+	}
+	
+	function setLightPositionX(val) {
+		setLights(ambientLightIntensity, pointLightIntensity, [val, pointLightPosition[1], pointLightPosition[2]] , specularLightIntensity, shininess);
+		scene.setUpToDate(false);
+	}
+	
+	function getLightPositionY() {
+		return pointLightPosition[1];
+	}
+	
+	function setLightPositionY(val) {
+		setLights(ambientLightIntensity, pointLightIntensity, [pointLightPosition[0], val, pointLightPosition[2]] , specularLightIntensity, shininess);
+		scene.setUpToDate(false);
+	}
+	
+	function getLightPositionZ() {
+		return pointLightPosition[2];
+	}
+	
+	function setLightPositionZ(val) {
+		setLights(ambientLightIntensity, pointLightIntensity, [pointLightPosition[0], pointLightPosition[1], val] , specularLightIntensity, shininess);
+		scene.setUpToDate(false);
+	}
+	
 	function getPointLightIntensity() {
-		return pointLigthIntensity;
+		return pointLightIntensity;
 	}
-
-	function getAmbientLigthIntensity() {
-		return ambientLigthIntensity;
+	
+	function setPointLightIntensity(val) {
+		setLights(ambientLightIntensity, val, pointLightPosition, specularLightIntensity, shininess);
+		scene.setUpToDate(false);
 	}
-
+	
+	function getAmbientLightIntensity() {
+		return ambientLightIntensity;
+	}
+	
+	function setAmbientLightIntensity(val) {
+		setLights(val, pointLightIntensity, pointLightPosition, specularLightIntensity, shininess);
+		scene.setUpToDate(false);
+	}
+	
+	function getSpecularLightIntensity() {
+		return specularLightIntensity;
+	}
+	
+	function setSpecularLightIntensity(val) {
+		setLights(ambientLightIntensity, pointLightIntensity, pointLightPosition, val, shininess);
+		scene.setUpToDate(false);
+	}
+	
+	function getShininess() {
+		return shininess;
+	}
+	
+	function setShininess(val) {
+		setLights(ambientLightIntensity, pointLightIntensity, pointLightPosition, specularLightIntensity, val);
+		scene.setUpToDate(false);
+	}
+	
 	/*
 	 * 	Access to the nodes in the scene-graph.
 	 */
@@ -119,10 +178,29 @@ define(["exports", "dojo", "model", "node", "shader"], function(exports, dojo, m
 	exports.init = init;
 	exports.createNodeWithModel = createNodeWithModel;
 	exports.setLights = setLights;
+	
 	exports.togglePointLight = togglePointLight;
-	exports.getLightPosition = getLightPosition;
+	exports.getPointLightOn = getPointLightOn;
+	
+	exports.getLightPositionX = getLightPositionX;
+	exports.setLightPositionX = setLightPositionX;
+	exports.getLightPositionY = getLightPositionY;
+	exports.setLightPositionY = setLightPositionY;
+	exports.getLightPositionZ = getLightPositionZ;
+	exports.setLightPositionZ = setLightPositionZ;
+	
 	exports.getPointLightIntensity = getPointLightIntensity;
-	exports.getAmbientLigthIntensity = getAmbientLigthIntensity;
+	exports.setPointLightIntensity = setPointLightIntensity;
+	
+	exports.getAmbientLightIntensity = getAmbientLightIntensity;
+	exports.setAmbientLightIntensity = setAmbientLightIntensity;
+	
+	exports.getSpecularLightIntensity = getSpecularLightIntensity;
+	exports.setSpecularLightIntensity = setSpecularLightIntensity;
+	
+	exports.getShininess = getShininess;
+	exports.setShininess = setShininess;
+	
 	exports.getNodes = getNodes;
 	exports.getNodeByName = getNodeByName;
 	exports.getRootNode = getRootNode;

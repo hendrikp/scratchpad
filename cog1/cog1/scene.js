@@ -8,7 +8,7 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 
 	// Name of the shading function used for all nodes
 	// (noShading, flat, gouraud, phong, etc)
-	var shadingFunctionName = "flat";
+	var shadingFunctionName = "phong";
 	//"noShading";
 
 	// Keep the canvas to access context and parameters.
@@ -34,7 +34,7 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 	var worldModelviewViewportProjection = mat4.create();
 
 	// Font for info on canvas (not in GUI) .
-	var fontsizeInPt = 10;
+	var fontsizeInPt = 8;
 	var font = fontsizeInPt + "pt Helvetica normal";
 	var fontLineHeightInPt = Math.ceil(fontsizeInPt * 1.5);
 	// Default drawing.
@@ -45,11 +45,13 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 	var triangulateDataOnInit = false;
 	var dataIsTriangulated = triangulateDataOnInit;
 	// Fill or stroke polygon.
-	var fill = false;
+	var fill = true;
 	// Display normals for debug.
 	var displayNormals = false;
 	// Display the z-buffer instead of the frame-buffer.
 	var debug_zBuffer = false;
+	// Show debug infos
+	var showDebugInfos = true;
 
 	/**
 	 * Initialize the scene, i.e., canvas, graphics-context, projection.
@@ -166,6 +168,58 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 		mat4.multiply(viewport, projection, viewportProjection);
 	}
 
+	var frameTimes = new Array();
+	var keepFrames = 20;
+	var currentFrameTime;
+	
+	function frameStart()
+	{
+		currentFrameTime = new Date();
+	}
+	
+	function frameEnd()
+	{
+		currentFrameTime = 1000 / (new Date() - currentFrameTime);
+		
+		if(frameTimes.length >= keepFrames)
+			frameTimes.shift();
+		
+		if(isFinite(currentFrameTime))
+			frameTimes.push(currentFrameTime);
+	}
+			
+	function showFPS()
+	{
+		if(frameTimes.length > 3)
+		{ // if enough data present
+			var meanTime = 0;
+			var maxTime = 0;
+			var minTime = 100000;
+			
+			var sum = 0;
+			
+			for (var i=0;i<frameTimes.length;i++)
+			{
+				if(frameTimes[i] > maxTime) maxTime = frameTimes[i];
+				if(frameTimes[i] < minTime) minTime = frameTimes[i];
+				
+				sum += frameTimes[i];
+			}
+			
+			meanTime = sum / frameTimes.length;
+			
+			ctx.fillStyle = defaultTextColor;
+			ctx.fillText("FPS["+frameTimes.length+"]: mean=" + meanTime.toFixed(1) + " min=" + minTime.toFixed(1) + " max=" + maxTime.toFixed(1), fontLineHeightInPt, fontLineHeightInPt);
+			ctx.fillStyle = defaultColor; // Reset color.
+			
+			return;
+		}
+		
+		ctx.fillStyle = defaultTextColor;
+		ctx.fillText("FPS: Unknown", fontLineHeightInPt, fontLineHeightInPt);
+		ctx.fillStyle = defaultColor; // Reset color.
+	}
+	
 	/**
 	 * Run the complete rendering pipeline for all nodes.
 	 */
@@ -173,7 +227,9 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 		if(upToDate) {
 			return true;
 		}
-
+		
+		frameStart();
+		
 		framebuffer.reset();
 		// Clear the canvas from debug info and from the
 		// remains of the last (maybe larger) dirty rectangle.
@@ -188,13 +244,13 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 		// A shortcut to the nodes.
 		var nodes = scenegraph.getNodes();
 
-		// Display matrices that are common for all nodes.
-		//displayViewProjectionMatrices();
-
 		//console.log("scene.render() notes:" + nodes.length);
 		// Loop over all nodes in the scene.
 		// Leave out nodes if they are not ready yet
 		// and report that.
+		var worldModelview;
+		var localModelview;
+		
 		for(var i = 0; i < nodes.length; i++) {
 			//console.log(nodes[i]);
 			//console.log(nodes[i].getModel());
@@ -207,11 +263,12 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 			//console.log("nodes[" + i + "] is ready");
 			// Render the node.
 			// Perform modelview, projection and viewport transformations in 3D.
-			var worldModelview = nodes[i].updateModelview();
+			
+			worldModelview = nodes[i].updateModelview();
+			localModelview = nodes[i].getLocalModelview();
+			
 			// Combine all three matrices into one.
 			mat4.multiply(viewportProjection, worldModelview, worldModelviewViewportProjection);
-			// Display for debug.
-			//displayModelViewMatrix(i, worldModelview, nodes[i].getLocalModelview());
 
 			// Apply the worldModelview matrix to the node.
 			// The result is stored in the transformedVertices of node.model.
@@ -234,7 +291,25 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 			// Raster the 2D polygons of the node.
 			renderModel(nodes[i].getModel());
 		}
+		
 		framebuffer.display();
+		
+		frameEnd();
+		
+		// Display debug stuff on top
+		if(showDebugInfos)
+		{
+			// Display matrices that are common for all nodes.
+			displayViewProjectionMatrices();
+			
+			// Display info for the last node
+			if(worldModelview != undefined && localModelview != undefined)
+				displayModelViewMatrix(i-1, worldModelview, localModelview);
+			
+			// Display FPS
+			showFPS();
+		}
+		
 		return upToDate;
 	}
 
@@ -258,7 +333,7 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 
 			// Register the current polygon with the shader,
 			// combined with back-face culling.
-			if(!fill || shader.setPolygon(p)) {
+			if(shader.setPolygon(p)) {
 				raster.scanlineDrawPolygon(ctx, vertices, polygon, color, fill);
 			}
 			
@@ -332,22 +407,22 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 		mat4.multiplyVec3(viewportProjection, endPoint);
 
 		raster.calcPlaneEquationForStraightLine(startPoint, normal);
-		raster.drawLineBresenhamGivenStartEndPoint(ctx, startPoint, endPoint, colorBlack, false);
+		raster.drawLineBresenham(ctx, startPoint, endPoint, colorBlack, false);
 	}
 
 	/**
 	 * Display Projection and View-port matrices.
 	 */
 	function displayViewProjectionMatrices() {
-		displayMatrix("Projection", projection, 10, 100);
-		displayMatrix("Viewport", viewport, 10, 200);
-		displayMatrix("Projection-Viewport", viewportProjection, 10, 300);
+		displayMatrix("Projection", projection, 10, fontLineHeightInPt* (3+6*0));
+		displayMatrix("Viewport", viewport, 10, fontLineHeightInPt* (3+6*1));
+		displayMatrix("Projection-Viewport", viewportProjection, 10, fontLineHeightInPt* (3+6*2));
 	}
 
 	function displayModelViewMatrix(nodeIndex, worldModelview, localModelview) {
-		displayMatrix("Local Modelview Node " + nodeIndex, localModelview, ctx.width - 220, 100);
-		displayMatrix("World Modelview Node " + nodeIndex, worldModelview, ctx.width - 220, 200);
-		displayMatrix("ModelviewViewProject Node " + nodeIndex, worldModelviewViewportProjection, ctx.width - 220, 300);
+		displayMatrix("Local Modelview Node " + nodeIndex, localModelview, framebuffer.width - 180, fontLineHeightInPt* 3);
+		displayMatrix("World Modelview Node " + nodeIndex, worldModelview, framebuffer.width - 180, fontLineHeightInPt* (3+6*1));
+		displayMatrix("ModelviewViewProject Node " + nodeIndex, worldModelviewViewportProjection, framebuffer.width - 180, fontLineHeightInPt* (3+6*2));
 	}
 
 	/**
@@ -432,16 +507,32 @@ define(["exports", "dojo", "dojo/dom-style", "app", "scenegraph", "createScene",
 		shader.setShadingFunction(shadingFunctionName);
 	}
 
+	function getShowDebugInfos()
+	{
+		return showDebugInfos;
+	}
+	
+	function toggleShowDebugInfos() {
+		showDebugInfos = !showDebugInfos;
+		setUpToDate(false);
+	}
+	
 	// Public API.
 	exports.init = init;
 	exports.setProjection = setProjection;
 	exports.render = render;
 	exports.setUpToDate = setUpToDate;
+	
 	// GUI switches. 
 	exports.toggleFill = toggleFill;
 	exports.toggleDebugNormals = toggleDebugNormals;
 	exports.toggleTriangulation = toggleTriangulation;
 	exports.toggleDebugZBuffer = toggleDebugZBuffer;
+	
+	// Debug infos
+	exports.toggleShowDebugInfos = toggleShowDebugInfos;
+	exports.getShowDebugInfos = getShowDebugInfos;
+	
 	// Public getter/setter for variables.
 	exports.getFill = getFill;
 	exports.getDisplayNormals = getDisplayNormals;
