@@ -913,7 +913,7 @@ function initContext(id)
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
-      posOrigin: [0, 1.0, 0.0],
+      posOrigin: [0, 0.0, 1.0],
       scale: [0.25, 0.25, 0.25],
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
@@ -921,7 +921,7 @@ function initContext(id)
     });
     var sphere4 = duplicateSceneObject(sphere, {
       name: 'sphere4',
-      posOrigin: [0, 1.0, 0.0],
+      posOrigin: [1, 0.0, 0.0],
       scale: [0.25, 0.25, 0.25],
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
