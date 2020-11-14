@@ -5,7 +5,7 @@
 # GVT Task 6
 [Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt6.md)
 
-Use controls at top to change shape param
+Use controls at top to change parameters.
 
 Keybinds (Standard FPS/Fly Controls)
 * Hold `Shift` to move faster
@@ -796,7 +796,7 @@ function initContext(id)
         Object.assign(shape, source);
         shape.params = params;
         shape.params.draw = source.params.draw;
-        
+
         shape.modelview = glMatrix.mat4.create();
 
         updateSceneObjectMatrix(shape);
@@ -834,9 +834,9 @@ function initContext(id)
     var torus = createSceneObject({
       name: 'torus',
       generator: generateTorus,
-      pos: [0, 0, 0.0],
+      pos: [0, 0.0, 0.0],
       scale: [0.5, 0.5, 0.5],
-      rotate: [0, -Math.PI*0.5, 0],
+      rotate: [0, 0, 0],
       r: 0.1, R: 1.0,
       Nu: 35, Nv: 20,
       drawLines: false,
@@ -889,11 +889,12 @@ function initContext(id)
     */
 
     // 5 - icosphere
+    var sscale = [0.1, 0.1, 0.1];
     var sphere = createSceneObject({
       name: 'sphere',
       generator: generateIcosphere,
       posOrigin: [0, 0.0, 0.0],
-      scale: [0.25, 0.25, 0.25],
+      scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       N: 3,
       drawLines: false,
@@ -908,22 +909,22 @@ function initContext(id)
     // 6. we need 3 more spheres to animate them
     var sphere2 = duplicateSceneObject(sphere, {
       name: 'sphere2',
-      posOrigin: [0, 1.0, 0.0],
-      scale: [0.25, 0.25, 0.25],
+      posOrigin: [0, 0.0, 0.0],
+      scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
-      posOrigin: [0, 0.0, 1.0],
-      scale: [0.25, 0.25, 0.25],
+      posOrigin: [0, 0.0, 0.0],
+      scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
     });
     var sphere4 = duplicateSceneObject(sphere, {
       name: 'sphere4',
-      posOrigin: [1, 0.0, 0.0],
-      scale: [0.25, 0.25, 0.25],
+      posOrigin: [0, 0.0, 0.0],
+      scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
     });
@@ -931,14 +932,18 @@ function initContext(id)
     // reset camera gui
     gui.add(context, "resetCamera");
 
+    // task 6 animation speed
+    context.animationSpeed = 0.2;
+    gui.add(context, "animationSpeed", 0.2, 0.4, 0.01);
+
     // based on https://de.wikipedia.org/wiki/Lemniskate_von_Bernoulli
-    function infinityRotatePath(shape, speed, tTotal, offset)
+    function infinityRotatePath(shape, speed, tTotal, offset, offset2)
     {
       // restore origin pos (shallow-clone)
       shape.params.pos = Array.from(shape.params.posOrigin);
 
       // calculate animated position
-      var t = speed * (tTotal + offset);
+      var t = offset + speed * (tTotal + offset2);
       var axisScale = 2.0 / (3.0-Math.cos(2.0*t));
       shape.params.pos[0] += axisScale * Math.cos(t);
       shape.params.pos[1] += axisScale * Math.sin(2.0*t) * 0.5;
@@ -949,11 +954,50 @@ function initContext(id)
       updateSceneObjectMatrix(shape);
     }
 
+    function infinityRotatePath2(shape, speed, tTotal, offset, offset2)
+    {
+      // restore origin pos (shallow-clone)
+      shape.params.pos = Array.from(shape.params.posOrigin);
+
+      // calculate animated position
+      var t = offset + speed * (tTotal + offset2);
+      var axisScale = 2.0 / (3.0-Math.cos(2.0*t));
+      shape.params.pos[2] += axisScale * Math.cos(t);
+      shape.params.pos[1] += axisScale * Math.sin(2.0*t) * 0.5;
+
+      shape.params.rotate[0] = Math.PI * t;
+
+      // update matrix
+      updateSceneObjectMatrix(shape);
+    }
+
+    function rotateTorus(shape, speed, tTotal, offset, offset2)
+    {
+      var t = offset + speed * tTotal;
+      shape.params.rotate[1] = offset2 + Math.PI * 2 * t;
+
+      // update matrix
+      updateSceneObjectMatrix(shape);
+    }
+
     // animation task
     function animate(elapsed, tTotal)
     {
-      var sceneSphere = scene['sphere'];
-      infinityRotatePath(sceneSphere, 0.2, tTotal, 0);
+      var speed = context.animationSpeed;
+
+      var s1 = scene['sphere'];
+      infinityRotatePath(s1, speed, tTotal, Math.PI*0.5, -1);
+      var s2 = scene['sphere2'];
+      infinityRotatePath(s2, speed, tTotal, Math.PI*0.5, 1);
+      var s3 = scene['sphere3'];
+      infinityRotatePath2(s3, speed, tTotal, 0, -1);
+      var s4 = scene['sphere4'];
+      //infinityRotatePath2(s4, speed, tTotal, Math.PI*0.5, 2);
+      infinityRotatePath2(s4, speed, tTotal, 0, 1);
+
+      var sceneTorus = scene['torus'];
+      rotateTorus(sceneTorus, 0.5 * (speed/Math.PI), tTotal, 0, -Math.PI*0.5 ); // -Math.PI*0.5
+      //rotateTorus(sceneTorus, 1, sceneSphere.params.pos[0], 0, -Math.PI*0.5 )
     }
 
     // draw task
