@@ -191,7 +191,7 @@ function generateSpiral( params )
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
 
   // generate data (spiral)
   var pi2 = 2 * Math.PI;
@@ -262,7 +262,7 @@ function generateTorus( params )
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
 
   // generate points
   for (var i=0; i<=Nu; i++)
@@ -422,7 +422,7 @@ function generateIcosphere( params )
     colors.push(c[0], c[1], c[2], 1);
   }
 
-  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
   return shape;
 }
 
@@ -444,7 +444,7 @@ function generateDrop( params )
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
 
   // generate points
   for (var i=0; i<=Nu; i++)
@@ -502,7 +502,7 @@ function generateGrid( params )
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { v: positions, i: indices, c: colors, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
 
   // generate points
   for (var i=0; i<=Nu; i++)
@@ -652,31 +652,31 @@ function initContext(id)
     function createBuffers(shape)
     {
       // store vertices
-      if (shape.v)
+      if (shape.m.v)
       {
-        shape.pBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.pBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.v), gl.STATIC_DRAW);
+        shape.m.pBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.pBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.m.v), gl.STATIC_DRAW);
       }
 
       // store indices
-      if (shape.i)
+      if (shape.m.i)
       {
-        console.assert((shape.i.length%3) == 0, "Indices not triangles");
+        console.assert((shape.m.i.length%3) == 0, "Indices not triangles");
 
-        shape.iBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.iBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(shape.i), gl.STATIC_DRAW);
+        shape.m.iBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.m.iBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(shape.m.i), gl.STATIC_DRAW);
       }
 
       // store colors
-      if (shape.c)
+      if (shape.m.c)
       {        
-        console.assert((shape.v.length/3) == (shape.c.length/4), "Vertices and Colors not matching");
+        console.assert((shape.m.v.length/3) == (shape.m.c.length/4), "Vertices and Colors not matching");
 
-        shape.cBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.cBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.c), gl.STATIC_DRAW);
+        shape.m.cBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.cBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.m.c), gl.STATIC_DRAW);
       }
     }
 
@@ -684,15 +684,15 @@ function initContext(id)
     function drawArrays(shape)
     {
       // if buffer not yet created try (cached)
-      if (!shape.pBuffer)
+      if (!shape.m.pBuffer)
       {
         createBuffers(shape);
       }
 
       // vertices
-      if (shape.pBuffer)
+      if (shape.m.pBuffer)
       {
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.pBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.pBuffer);
         gl.enableVertexAttribArray(posAttribute);
         gl.vertexAttribPointer(posAttribute, 3, gl.FLOAT, false, 0, 0);
       }
@@ -701,38 +701,38 @@ function initContext(id)
       gl.uniformMatrix4fv(u_modelview, false, shape.modelview );
 
       // draw
-      gl.drawArrays(gl.LINE_STRIP, 0, shape.v.length / 3);
+      gl.drawArrays(gl.LINE_STRIP, 0, shape.m.v.length / 3);
     }
 
     // method to draw
     function drawElements(shape)
     {
       // if buffer not yet created try (cached)
-      if (!shape.pBuffer)
+      if (!shape.m.pBuffer)
       {
         createBuffers(shape);
       }
 
       // vertices
-      if (shape.pBuffer)
+      if (shape.m.pBuffer)
       {
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.pBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.pBuffer);
         gl.enableVertexAttribArray(posAttribute);
         gl.vertexAttribPointer(posAttribute, 3, gl.FLOAT, false, 0, 0);
       }
 
       // colors
-      if (shape.cBuffer)
+      if (shape.m.cBuffer)
       {
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.cBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.cBuffer);
         gl.enableVertexAttribArray(colAttribute);
         gl.vertexAttribPointer(colAttribute, 4, gl.FLOAT, false, 0, 0);
       }
 
       // indices
-      if (shape.iBuffer)
+      if (shape.m.iBuffer)
       {
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.iBuffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.m.iBuffer);
       }
 
       // position
@@ -742,12 +742,12 @@ function initContext(id)
       if (shape.params.drawLines == true)
       {
         // draw lines
-        gl.drawElements(gl.LINES, shape.i.length, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.LINES, shape.m.i.length, gl.UNSIGNED_SHORT, 0);
       }
       else 
       {
         // draw triangles based on indices
-        gl.drawElements(gl.TRIANGLES, shape.i.length, gl.UNSIGNED_SHORT, 0);
+        gl.drawElements(gl.TRIANGLES, shape.m.i.length, gl.UNSIGNED_SHORT, 0);
       }
     }
 
@@ -795,6 +795,9 @@ function initContext(id)
         var shape = {};
         Object.assign(shape, source);
         shape.params = params;
+        shape.params.draw = source.params.draw;
+        
+        shape.modelview = glMatrix.mat4.create();
 
         updateSceneObjectMatrix(shape);
         scene[shape.params.name] = shape; // place into scene
@@ -909,7 +912,6 @@ function initContext(id)
       scale: [0.25, 0.25, 0.25],
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      draw: drawElements,
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
@@ -917,7 +919,6 @@ function initContext(id)
       scale: [0.25, 0.25, 0.25],
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      draw: drawElements,
     });
     var sphere4 = duplicateSceneObject(sphere, {
       name: 'sphere4',
@@ -925,7 +926,6 @@ function initContext(id)
       scale: [0.25, 0.25, 0.25],
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      draw: drawElements,
     });
 
     // reset camera gui
