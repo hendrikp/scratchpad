@@ -21,7 +21,7 @@ Keybinds (Standard FPS/Fly Controls)
 * `C` - Move Camera Down
 * Drag Canvas with mouse to rotate camera
 
-## WebGL Visualize Z-Depth
+## WebGL Visualize Z-Depth (With intersecting shapes)
 <canvas id="wgl" width="768" height="768" style="outline: grey 2px solid;"></canvas>
 
 <script id="wgl_vertex" type="nojs">
