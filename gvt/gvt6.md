@@ -769,10 +769,35 @@ function initContext(id)
     {
       if (params.name != '')
       {
+        if (params.pos === undefined && params.posOrigin !== undefined)
+        {
+          params.pos = Array.from(params.posOrigin);
+        }
+
         var shape = params.generator(params);
 
         updateSceneObjectMatrix(shape);
-        scene[shape.params.name] = shape; // place spiral into scene
+        scene[shape.params.name] = shape; // place into scene
+
+        return shape;
+      }
+    }
+
+    function duplicateSceneObject(source, params)
+    {
+      if (params.name != '')
+      {
+        if (params.pos === undefined && params.posOrigin !== undefined)
+        {
+          params.pos = Array.from(params.posOrigin);
+        }
+
+        var shape = {};
+        Object.assign(shape, source);
+        shape.params = params;
+
+        updateSceneObjectMatrix(shape);
+        scene[shape.params.name] = shape; // place into scene
 
         return shape;
       }
@@ -806,17 +831,18 @@ function initContext(id)
     var torus = createSceneObject({
       name: 'torus',
       generator: generateTorus,
-      pos: [0.5, 0.5, 0.0],
+      pos: [0, 0, 0.0],
       scale: [0.5, 0.5, 0.5],
-      rotate: [-Math.PI*0.4, -0.5, 0.0],
-      r: 0.11, R: 0.47,
-      Nu: 20, Nv: 10,
+      rotate: [0, -Math.PI*0.5, 0],
+      r: 0.1, R: 1.0,
+      Nu: 35, Nv: 20,
       drawLines: false,
       draw: drawElements,
     });
+    /*
     var ui = gui.addFolder('Torus - 4.1+2');
     ui.add(torus.params, "r", 0, 0.5, 0.0002).onChange( function() { createSceneObject(torus.params); requestFrame(); } );
-    ui.add(torus.params, "R", 0, 0.5, 0.005).onChange( function() { createSceneObject(torus.params); requestFrame(); } );
+    ui.add(torus.params, "R", 0, 1, 0.005).onChange( function() { createSceneObject(torus.params); requestFrame(); } );
     ui.add(torus.params, "Nu", 3, 40, 1).onChange( function() { createSceneObject(torus.params); requestFrame(); } );
     ui.add(torus.params, "Nv", 3, 40, 1).onChange( function() { createSceneObject(torus.params); requestFrame(); } );
     ui.add(torus.params, "drawLines").onChange( requestFrame );
@@ -839,7 +865,7 @@ function initContext(id)
     ui.add(drop.params, "Nu", 3, 40, 1).onChange( function() { createSceneObject(drop.params); requestFrame();} );
     ui.add(drop.params, "Nv", 3, 40, 1).onChange( function() { createSceneObject(drop.params); requestFrame();} );
     ui.add(drop.params, "drawLines").onChange( requestFrame );
-
+    
     // 4.3 - custom procedural shape - extended task 3
     var wspiral = createSceneObject({
       name: 'wspiral',
@@ -857,37 +883,67 @@ function initContext(id)
     ui.add(wspiral.params, "b", 0, 0.3, 0.005).onChange( function() { createSceneObject(wspiral.params); requestFrame();} );
     ui.add(wspiral.params, "rotations", 0, 20, 0.3).onChange( function() { createSceneObject(wspiral.params); requestFrame();} );
     ui.add(wspiral.params, "drawLines").onChange( requestFrame );
+    */
 
     // 5 - icosphere
     var sphere = createSceneObject({
       name: 'sphere',
       generator: generateIcosphere,
-      posOrigin: [-0.5, 0.5, 0.0],
-      pos: [-0.5, 0.5, 0.0],
+      posOrigin: [0, 0.0, 0.0],
       scale: [0.25, 0.25, 0.25],
       rotate: [0.0, 0.0, 0.0],
       N: 3,
       drawLines: false,
       draw: drawElements,
     });
+    /*
     var ui = gui.addFolder('Icosphere - 5');
     ui.add(sphere.params, "N", 0, 4, 1).onChange( function() { createSceneObject(sphere.params); requestFrame();} );
     ui.add(sphere.params, "drawLines").onChange( requestFrame );
+    */
+
+    // 6. we need 3 more spheres to animate them
+    var sphere2 = duplicateSceneObject(sphere, {
+      name: 'sphere2',
+      posOrigin: [0, 1.0, 0.0],
+      scale: [0.25, 0.25, 0.25],
+      rotate: [0.0, 0.0, 0.0],
+      drawLines: false,
+      draw: drawElements,
+    });
+    var sphere3 = duplicateSceneObject(sphere, {
+      name: 'sphere3',
+      posOrigin: [0, 1.0, 0.0],
+      scale: [0.25, 0.25, 0.25],
+      rotate: [0.0, 0.0, 0.0],
+      drawLines: false,
+      draw: drawElements,
+    });
+    var sphere4 = duplicateSceneObject(sphere, {
+      name: 'sphere4',
+      posOrigin: [0, 1.0, 0.0],
+      scale: [0.25, 0.25, 0.25],
+      rotate: [0.0, 0.0, 0.0],
+      drawLines: false,
+      draw: drawElements,
+    });
 
     // reset camera gui
     gui.add(context, "resetCamera");
 
     // based on https://de.wikipedia.org/wiki/Lemniskate_von_Bernoulli
-    function infinityRotatePath(shape, speed, tTotal)
+    function infinityRotatePath(shape, speed, tTotal, offset)
     {
       // restore origin pos (shallow-clone)
       shape.params.pos = Array.from(shape.params.posOrigin);
 
       // calculate animated position
-      var t = speed * tTotal;
+      var t = speed * (tTotal + offset);
       var axisScale = 2.0 / (3.0-Math.cos(2.0*t));
       shape.params.pos[0] += axisScale * Math.cos(t);
       shape.params.pos[1] += axisScale * Math.sin(2.0*t) * 0.5;
+
+      shape.params.rotate[2] = Math.PI * t;
 
       // update matrix
       updateSceneObjectMatrix(shape);
@@ -897,7 +953,7 @@ function initContext(id)
     function animate(elapsed, tTotal)
     {
       var sceneSphere = scene['sphere'];
-      infinityRotatePath(sceneSphere, 0.2, tTotal);
+      infinityRotatePath(sceneSphere, 0.2, tTotal, 0);
     }
 
     // draw task
