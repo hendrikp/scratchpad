@@ -988,12 +988,11 @@ function initContext(id)
       var s1 = scene['sphere'];
       infinityRotatePath(s1, speed, tTotal, Math.PI*0.5, -1);
       var s2 = scene['sphere2'];
-      infinityRotatePath(s2, speed, tTotal, Math.PI*0.5, 1);
+      infinityRotatePath(s2, speed, tTotal, 0, 1);
       var s3 = scene['sphere3'];
       infinityRotatePath2(s3, speed, tTotal, 0, -1);
       var s4 = scene['sphere4'];
-      //infinityRotatePath2(s4, speed, tTotal, Math.PI*0.5, 2);
-      infinityRotatePath2(s4, speed, tTotal, 0, 1);
+      infinityRotatePath2(s4, speed, tTotal, Math.PI*0.5, 1);
 
       var sceneTorus = scene['torus'];
       rotateTorus(sceneTorus, 0.5 * (speed/Math.PI), tTotal, 0, -Math.PI*0.5 ); // -Math.PI*0.5
