@@ -738,7 +738,7 @@ function initContext(id)
       // store indices
       if (shape.m.i)
       {
-        console.assert((shape.m.i.length%3) == 0, "Indices not triangles");
+        console.assert((shape.m.i.length%3) == 0, "[%s] Indices %d not triangles", shape.params.name, shape.m.i.length);
 
         shape.m.iBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.m.iBuffer);
@@ -748,7 +748,7 @@ function initContext(id)
       // store colors
       if (shape.m.c)
       {        
-        console.assert((shape.m.v.length/3) == (shape.m.c.length/4), "Vertices and Colors not matching");
+        console.assert((shape.m.v.length/3) == (shape.m.c.length/4), "[%s] Vertices %d and Colors %d not matching", shape.params.name, shape.m.v.length, shape.m.c.length);
 
         shape.m.cBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.cBuffer);
