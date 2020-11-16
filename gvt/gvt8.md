@@ -789,7 +789,7 @@ function initContext(id)
 
     // ambient light
     context.u_ambientLight = gl.getUniformLocation(program, "ambientLight");
-    context.ambientLight = [0.1, 0.1, 0.1];
+    context.ambientLight = [0.5, 0.5, 0.5];
 
     // phong lights
     context.maxLights = 2;
@@ -1005,10 +1005,13 @@ function initContext(id)
       // normal matrix
       gl.uniformMatrix3fv(u_normalmatrix, false, shape.normalmatrix );
 
-      // material
+      // phong material
       if (shape.params.mat)
       {
-
+        gl.uniform3fv(context.u_material, shape.params.mat.ka);
+        gl.uniform3fv(context.u_material, shape.params.mat.kd);
+        gl.uniform3fv(context.u_material, shape.params.mat.ks);
+        gl.uniform1f( context.u_material, shape.params.mat.ke);
       }
 
       // ui options for drawing
@@ -1223,7 +1226,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      createPhongMaterial({kd:[0.,0.,1.]}), // blue
+      mat: createPhongMaterial({kd:[0.,0.,1.]}), // blue
     });
 
     // 7. add more interecting shapes for Z-Visualization
@@ -1339,6 +1342,25 @@ function initContext(id)
 
       // update camera
       gl.uniformMatrix4fv(u_camera, false, camera );
+
+      // update lights
+      if (context.renderStyle >= 3 && context.renderStyle <= 4)
+      {
+        // ambient
+        gl.uniform3fv(program.u_ambientLight, context.ambientLight);
+
+        for (var i = 0; i < context.light; i++)
+        {
+          gl.uniform1i(program.u_light[i].active, context.light[i].active);
+
+          if (context.light[i].active)
+          {
+            gl.uniform3fv(prog.u_light[j].position, context.light[i].position); // TODO transform
+
+            gl.uniform3fv(prog.u_light[j].color, context.light[i].color);
+          }
+        }
+      }
 
       // draw all shapes in scene
       for (shape in scene)
