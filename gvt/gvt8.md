@@ -1349,7 +1349,7 @@ function initContext(id)
         // ambient
         gl.uniform3fv(context.u_ambientLight, context.ambientLight);
 
-        for (var i = 0; i < context.light; i++)
+        for (var i = 0; i < context.light.length; i++)
         {
           var l = context.light[i];
           var lu = l.u;
