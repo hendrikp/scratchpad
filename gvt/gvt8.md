@@ -110,7 +110,7 @@ vec3 phong(vec3 p, vec3 n, vec3 v, Light l)
   return diffuse + specular;			
 }
 
-// add all phong lights additive and ambient light
+// add up ambient light and lights 
 vec3 phong(vec3 p, vec3 n, vec3 v)
 {
   // ambient light
@@ -797,15 +797,15 @@ function initContext(id)
     context.light = [];
     for (var i = 0; i < context.maxLights; i++)
     {
-      context.u_light.push({
-        active:   gl.getUniformLocation(program, "light[" + i + "].active"),
-        position: gl.getUniformLocation(program, "light[" + i + "].position"),
-        color:    gl.getUniformLocation(program, "light[" + i + "].color")
-      });
       context.light.push({
         active:   false,
         position: [0, 0, 0],
-        color:    [1, 1, 1]
+        color:    [1, 1, 1],
+        u: {
+          active:   gl.getUniformLocation(program, "light[" + i + "].active"),
+          position: gl.getUniformLocation(program, "light[" + i + "].position"),
+          color:    gl.getUniformLocation(program, "light[" + i + "].color")
+        },
       });
     }
 
@@ -1347,17 +1347,19 @@ function initContext(id)
       if (context.renderStyle >= 3 && context.renderStyle <= 4)
       {
         // ambient
-        gl.uniform3fv(program.u_ambientLight, context.ambientLight);
+        gl.uniform3fv(context.u_ambientLight, context.ambientLight);
 
         for (var i = 0; i < context.light; i++)
         {
-          gl.uniform1i(program.u_light[i].active, context.light[i].active);
+          var l = context.light[i];
+          var lu = l.u;
+          gl.uniform1i(lu.active, l.active);
 
-          if (context.light[i].active)
+          if (l.active)
           {
-            gl.uniform3fv(prog.u_light[j].position, context.light[i].position); // TODO transform
+            gl.uniform3fv(lu.position, l.position); // TODO transform
 
-            gl.uniform3fv(prog.u_light[j].color, context.light[i].color);
+            gl.uniform3fv(lu.color, l.color);
           }
         }
       }
