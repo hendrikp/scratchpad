@@ -1008,10 +1008,10 @@ function initContext(id)
       // phong material
       if (shape.params.mat)
       {
-        gl.uniform3fv(context.u_material, shape.params.mat.ka);
-        gl.uniform3fv(context.u_material, shape.params.mat.kd);
-        gl.uniform3fv(context.u_material, shape.params.mat.ks);
-        gl.uniform1f( context.u_material, shape.params.mat.ke);
+        gl.uniform3fv(context.u_materialKa, shape.params.mat.ka);
+        gl.uniform3fv(context.u_materialKd, shape.params.mat.kd);
+        gl.uniform3fv(context.u_materialKs, shape.params.mat.ks);
+        gl.uniform1f( context.u_materialKe, shape.params.mat.ke);
       }
 
       // ui options for drawing
