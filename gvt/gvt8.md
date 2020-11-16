@@ -1330,6 +1330,15 @@ function initContext(id)
       rotateTorus(sceneTorus, 0.5 * (speed/Math.PI), tTotal, 0, -Math.PI*0.5 ); 
     }
 
+    // enable light 1
+    context.light[0].active = true;
+    context.light[0].color = [1,1,1];
+
+    // enable light 2
+    context.light[1].active = true;
+    context.light[1].position = [0, 0, 1.3];
+    context.light[1].color = [1,1,1];
+
     // draw task
     context.render = function(elapsed, tTotal)
     {
