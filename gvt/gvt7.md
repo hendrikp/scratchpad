@@ -590,7 +590,7 @@ function generatePyramid( params )
   for(var i = 0; i < positions.length; i+=3)
   {
     colors.push(0.9, 0, 0, 1); // red
-    indices.push( i+0 );
+    indices.push( i/3 );
   }
 
   // bottom CCW
