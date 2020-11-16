@@ -36,6 +36,7 @@ attribute vec4 pos;
 attribute vec3 normal;
 attribute vec4 col;
 
+varying vec4 vPosition;
 varying vec4 vColor;
 varying vec3 vNormal;
 
@@ -52,7 +53,8 @@ void main()
   vColor = col;
 
   // gl_Position = projection * camera * modelmatrix * pos; // use precalulate modelview now.. (as needed for normalmatrix too)
-  gl_Position = projection * modelview * pos;
+  vPosition = modelview * pos;
+  gl_Position = projection * vPosition;
 
   vNormal = normalize(normalmatrix * normal);
 }
@@ -61,12 +63,69 @@ void main()
 <script id="wgl_fragment" type="nojs">
 precision mediump float;
 
+varying vec4 vPosition;
 varying vec4 vColor;
 varying vec3 vNormal;
 
 uniform int renderStyle;
 
+// Material // Task 8 Phong
+struct PhongMaterial
+{
+  vec3 ka;
+  vec3 kd;
+  vec3 ks;
+  float ke; 
+};
+uniform PhongMaterial material;
+
+const int MAX_LIGHTS = 2;
+struct Light
+{
+  bool active;
+  vec3 position;
+  vec3 color;
+};
+
+uniform vec3 ambientLight;
+uniform Light light[MAX_LIGHTS];
+
 uniform vec2 cameraZ; // z-depth (task 7)
+
+// Phong illumination for single light source, no ambient light. (BEL-3)
+vec3 phong(vec3 p, vec3 n, vec3 v, Light l)
+{
+  vec3 L = l.color;
+
+  vec3 s = normalize(l.position - p);
+  vec3 r = reflect(-s, n);
+
+  float sn = max( dot(s,n), 0.0);
+  float rv = max( dot(r,v), 0.0);
+      
+  vec3 diffuse = material.kd * L * sn;
+              
+  vec3 specular = material.ks * L * pow(rv, material.ke);
+
+  return diffuse + specular;			
+}
+
+// add all phong lights additive and ambient light
+vec3 phong(vec3 p, vec3 n, vec3 v)
+{
+  // ambient light
+  vec3 result = material.ka * ambientLight;
+
+  // light from sources
+  for (int i=0; i < MAX_LIGHTS; i++)
+  {
+    if (light[i].active)
+    {
+      result += phong(p, n, v, light[i]);
+    }
+  }
+  return result;
+}
 
 // z-depth (task 7)
 float transformZ(float z)
@@ -85,7 +144,13 @@ void main()
   }
   else if (renderStyle == 2)
   {
+    // normals (debug)
     gl_FragColor = vec4((vNormal*0.5)+0.5, 1.0);
+  }
+  else if (renderStyle == 3)
+  {
+    // phong (task 8)
+    gl_FragColor = vec4( phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz)), 1.0);
   }
   else
   {
@@ -646,6 +711,18 @@ function rad2deg(r)
   return r * (180.0/Math.PI);
 }
 
+function createPhongMaterial(material) {
+  material = material || {};
+
+  // defaults
+  material.ka = material.ka || [ 0.3, 0.3, 0.3 ];
+  material.kd = material.kd || [ 0.6, 0.6, 0.6 ];
+  material.ks = material.ks || [ 0.8, 0.8, 0.8 ];
+  material.ke = material.ke || 10.;
+
+  return material;
+}
+
 // init context
 function initContext(id)
 {
@@ -709,6 +786,34 @@ function initContext(id)
     // normalmatrix
     var u_normalmatrix = gl.getUniformLocation(program, "normalmatrix");
     context.u_normalmatrix = u_normalmatrix;
+
+    // ambient light
+    context.u_ambientLight = gl.getUniformLocation(program, "ambientLight");
+    context.ambientLight = [0.1, 0.1, 0.1];
+
+    // phong lights
+    context.maxLights = 2;
+    context.u_light = [];
+    context.light = [];
+    for (var i = 0; i < context.maxLights; i++)
+    {
+      context.u_light.push({
+        active:   gl.getUniformLocation(program, "light[" + i + "].active"),
+        position: gl.getUniformLocation(program, "light[" + i + "].position"),
+        color:    gl.getUniformLocation(program, "light[" + i + "].color")
+      });
+      context.light.push({
+        active:   false,
+        position: [0, 0, 0],
+        color:    [1, 1, 1]
+      });
+    }
+
+    // material
+    context.u_materialKa = gl.getUniformLocation(program, "material.ka");
+    context.u_materialKd = gl.getUniformLocation(program, "material.kd");
+    context.u_materialKs = gl.getUniformLocation(program, "material.ks");
+    context.u_materialKe = gl.getUniformLocation(program, "material.ke");
 
     // projection
     var u_projection = gl.getUniformLocation(program, "projection");
@@ -900,6 +1005,12 @@ function initContext(id)
       // normal matrix
       gl.uniformMatrix3fv(u_normalmatrix, false, shape.normalmatrix );
 
+      // material
+      if (shape.params.mat)
+      {
+
+      }
+
       // ui options for drawing
       if (shape.params.drawLines == true)
       {
@@ -998,6 +1109,7 @@ function initContext(id)
       N: 50,
       drawLines: false,
       draw: drawElements,
+      mat: createPhongMaterial(),
     });
 
     var ui = gui.addFolder('Scene Grid');
@@ -1021,6 +1133,7 @@ function initContext(id)
       Nu: 35, Nv: 20,
       drawLines: false,
       draw: drawElements,
+      mat: createPhongMaterial(),
     });
     /*
     var ui = gui.addFolder('Torus - 4.1+2');
@@ -1079,6 +1192,7 @@ function initContext(id)
       N: 3,
       drawLines: false,
       draw: drawElements,
+      mat: createPhongMaterial({kd:[1.,1.,0.]}), // yellow
     });
     /*
     var ui = gui.addFolder('Icosphere - 5');
@@ -1093,6 +1207,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
+      mat: createPhongMaterial({kd:[0.,1.,0.]}), // green
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
@@ -1100,6 +1215,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
+      mat: createPhongMaterial({kd:[1.,0.,0.]}), // red
     });
     var sphere4 = duplicateSceneObject(sphere, {
       name: 'sphere4',
@@ -1107,6 +1223,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
+      createPhongMaterial({kd:[0.,0.,1.]}), // blue
     });
 
     // 7. add more interecting shapes for Z-Visualization
@@ -1135,6 +1252,7 @@ function initContext(id)
       scale: [1.0, 1.0, 1.0],
       rotate: [0, 0 , 0.0],
       drawLines: false,
+      mat: createPhongMaterial(),
     });
 
     // reset camera gui
