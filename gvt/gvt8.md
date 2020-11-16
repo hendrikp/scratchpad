@@ -50,7 +50,10 @@ uniform mat3 normalmatrix;
 void main()
 {
   vColor = col;
+
+  // gl_Position = projection * camera * modelmatrix * pos; // use precalulate modelview now.. (as needed for normalmatrix too)
   gl_Position = projection * modelview * pos;
+
   vNormal = normalize(normalmatrix * normal);
 }
 </script>
