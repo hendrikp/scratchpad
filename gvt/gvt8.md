@@ -33,22 +33,33 @@ Scene Keybinds
 
 <script id="wgl_vertex" type="nojs">
 attribute vec4 pos;
+attribute vec3 normal;
 attribute vec4 col;
+
 varying vec4 vColor;
+varying vec3 vNormal;
+
 uniform mat4 projection;
 uniform mat4 camera;
-uniform mat4 modelview;
+uniform mat4 modelmatrix;
+uniform mat3 normalmatrix;
+
 void main()
 {
   vColor = col;
-  gl_Position = projection * camera * modelview * pos;
+  gl_Position = projection * camera * modelmatrix * pos;
+  vNormal = normalmatrix * normal;
 }
 </script>
 
 <script id="wgl_fragment" type="nojs">
 precision mediump float;
+
 varying vec4 vColor;
+varying vec3 vNormal;
+
 uniform int renderStyle;
+
 uniform vec2 cameraZ; // z-depth (task 7)
 
 // z-depth (task 7)
@@ -65,6 +76,10 @@ void main()
   {
     // z-depth (task 7)
     gl_FragColor = vec4(vec3(transformZ(gl_FragCoord.z)), 1.0);
+  }
+  else if (renderStyle == 2)
+  {
+    gl_FragColor = vec4((vNormal*0.5)+0.5, 1.0);
   }
   else
   {
@@ -125,7 +140,7 @@ function requestFrame(requester)
 }
 
 // Use glMatrix
-const {mat4, vec3, quat} = glMatrix;
+const {mat4, mat3, vec3, quat} = glMatrix;
 
 // resize helper from https://webgl2fundamentals.org/webgl/resources/webgl-utils.js
 function resizeCanvasToDisplaySize(canvas, multiplier) {
@@ -222,7 +237,7 @@ function generateSpiral( params )
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelmatrix: glMatrix.mat4.create() };
 
   // generate data (spiral)
   var pi2 = 2 * Math.PI;
@@ -294,7 +309,7 @@ function generateTorus( params )
   var indices = [];
   var colors = [];
   var normals = [];
-  var shape = { m: {v: positions, n: normals, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, n: normals, i: indices, c: colors}, params: params, modelmatrix: glMatrix.mat4.create() };
 
   // generate points
   for (var i=0; i<=Nu; i++)
@@ -462,7 +477,7 @@ function generateIcosphere( params )
     colors.push(c[0], c[1], c[2], 1);
   }
 
-  var shape = { m: {v: positions, n: normals, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, n: normals, i: indices, c: colors}, params: params, modelmatrix: glMatrix.mat4.create() };
   return shape;
 }
 
@@ -484,7 +499,7 @@ function generateDrop( params )
   var positions = [];
   var indices = [];
   var colors = [];
-  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelmatrix: glMatrix.mat4.create() };
 
   // generate points
   for (var i=0; i<=Nu; i++)
@@ -543,7 +558,7 @@ function generateGrid( params )
   var indices = [];
   var colors = [];
   var normals = [];
-  var shape = { m: {v: positions, n: normals, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, n: normals, i: indices, c: colors}, params: params, modelmatrix: glMatrix.mat4.create() };
 
   // generate points
   for (var i=0; i<=Nu; i++)
@@ -616,7 +631,7 @@ function generatePyramid( params )
   indices.push( 1+2*3, 1+1*3, 1+0*3);
   indices.push( 1+0*3, 1+3*3, 1+2*3);
 
-  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelview: glMatrix.mat4.create() };
+  var shape = { m: {v: positions, i: indices, c: colors}, params: params, modelmatrix: glMatrix.mat4.create() };
   return shape;
 }
 
@@ -674,10 +689,16 @@ function initContext(id)
     context.posAttribute = posAttribute;
     var colAttribute = gl.getAttribLocation(program, "col");
     context.colAttribute = colAttribute;
+    var normalAttribute = gl.getAttribLocation(program, "normal");
+    context.normalAttribute = normalAttribute;
 
-    // modelview
-    var u_modelview = gl.getUniformLocation(program, "modelview");
-    context.u_modelview = u_modelview;
+    // modelmatrix
+    var u_modelmatrix = gl.getUniformLocation(program, "modelmatrix");
+    context.u_modelmatrix = u_modelmatrix;
+
+    // normalmatrix
+    var u_normalmatrix = gl.getUniformLocation(program, "normalmatrix");
+    context.u_normalmatrix = u_normalmatrix;
 
     // projection
     var u_projection = gl.getUniformLocation(program, "projection");
@@ -774,6 +795,16 @@ function initContext(id)
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(shape.m.i), gl.STATIC_DRAW);
       }
 
+      // store normals
+      if (shape.m.n)
+      {        
+        console.assert(shape.m.n.length == shape.m.v.length, "[%s] Vertices %d and Normals %d not matching", shape.params.name, shape.m.n.length, shape.m.v.length);
+
+        shape.m.nBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.nBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(shape.m.n), gl.STATIC_DRAW);
+      }
+
       // store colors
       if (shape.m.c)
       {        
@@ -785,6 +816,7 @@ function initContext(id)
       }
     }
 
+    /*
     // method to draw line strip
     function drawArrays(shape)
     {
@@ -803,11 +835,12 @@ function initContext(id)
       }
 
       // position
-      gl.uniformMatrix4fv(u_modelview, false, shape.modelview );
+      gl.uniformMatrix4fv(u_modelmatrix, false, shape.modelmatrix );
 
       // draw
       gl.drawArrays(gl.LINE_STRIP, 0, shape.m.v.length / 3);
     }
+    */
 
     // method to draw
     function drawElements(shape)
@@ -826,6 +859,14 @@ function initContext(id)
         gl.vertexAttribPointer(posAttribute, 3, gl.FLOAT, false, 0, 0);
       }
 
+      // normals
+      if (shape.m.nBuffer)
+      {
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.nBuffer);
+        gl.enableVertexAttribArray(normalAttribute);
+        gl.vertexAttribPointer(normalAttribute, 3, gl.FLOAT, false, 0, 0);
+      }
+
       // colors
       if (shape.m.cBuffer)
       {
@@ -841,7 +882,7 @@ function initContext(id)
       }
 
       // position
-      gl.uniformMatrix4fv(u_modelview, false, shape.modelview );
+      gl.uniformMatrix4fv(u_modelmatrix, false, shape.modelmatrix );
 
       // ui options for drawing
       if (shape.params.drawLines == true)
@@ -859,15 +900,33 @@ function initContext(id)
     // generate data
     var scene = {};
     context.scene = scene;
+
+    // update camera dependend matrix
+    function updateSceneObjectModelViewMatrix(shape)
+    {
+      // calculate normal matrix and modelview matrix
+      if (!shape.normalmatrix)
+      {
+        shape.normalmatrix = mat3.create();
+        shape.modelview = mat4.create();
+      }
+
+      mat4.multiply(shape.modelview, camera, shape.modelmatrix);
+      mat3.normalFromMat4(shape.normalmatrix, shape.modelview);
+    }
+
+    // update model instance dependent matrix
     function updateSceneObjectMatrix(shape)
     {
-        // reposition + resize
-        mat4.identity(shape.modelview);
-        mat4.translate(shape.modelview, shape.modelview, shape.params.pos);
-        mat4.scale(shape.modelview, shape.modelview, shape.params.scale);
-        mat4.rotateX(shape.modelview, shape.modelview, shape.params.rotate[0]);
-        mat4.rotateY(shape.modelview, shape.modelview, shape.params.rotate[1]);
-        mat4.rotateZ(shape.modelview, shape.modelview, shape.params.rotate[2]);
+      // reposition + resize
+      mat4.identity(shape.modelmatrix);
+      mat4.translate(shape.modelmatrix, shape.modelmatrix, shape.params.pos);
+      mat4.scale(shape.modelmatrix, shape.modelmatrix, shape.params.scale);
+      mat4.rotateX(shape.modelmatrix, shape.modelmatrix, shape.params.rotate[0]);
+      mat4.rotateY(shape.modelmatrix, shape.modelmatrix, shape.params.rotate[1]);
+      mat4.rotateZ(shape.modelmatrix, shape.modelmatrix, shape.params.rotate[2]);
+
+      updateSceneObjectModelViewMatrix(shape);
     }
 
     function createSceneObject(params)
@@ -902,7 +961,7 @@ function initContext(id)
         shape.params = params;
         shape.params.draw = source.params.draw;
 
-        shape.modelview = glMatrix.mat4.create();
+        shape.modelmatrix = glMatrix.mat4.create();
 
         updateSceneObjectMatrix(shape);
         scene[shape.params.name] = shape; // place into scene
@@ -1070,7 +1129,7 @@ function initContext(id)
     gui.add(context, "animationSpeed", 0.2, 0.4, 0.01);
 
     // task 7 z-Depth visualization
-    gui.add(context, "renderStyle", 0, 1, 1);
+    gui.add(context, "renderStyle", 0, 4, 1);
 
     // based on https://de.wikipedia.org/wiki/Lemniskate_von_Bernoulli
     function infinityRotatePath(shape, speed, tTotal, offset, offset2)
@@ -1150,6 +1209,7 @@ function initContext(id)
       // draw all shapes in scene
       for (shape in scene)
       {
+        updateSceneObjectModelViewMatrix(shape);
         scene[shape].params.draw(scene[shape]);
       }
 
