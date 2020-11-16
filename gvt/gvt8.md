@@ -51,7 +51,7 @@ void main()
 {
   vColor = col;
   gl_Position = projection * modelview * pos;
-  vNormal = normalmatrix * normal;
+  vNormal = normalize(normalmatrix * normal);
 }
 </script>
 
@@ -331,7 +331,7 @@ function generateTorus( params )
       normals.push(
         Math.cos(v) * Math.cos(u),
         Math.cos(v) * Math.sin(u),
-        Math.sin(u)
+        Math.sin(v)
       );
 
       var c = hsl2rgb(j/Nv, 0.5, 0.5);
