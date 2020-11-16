@@ -40,14 +40,17 @@ varying vec4 vColor;
 varying vec3 vNormal;
 
 uniform mat4 projection;
+
+uniform mat4 modelview;
 uniform mat4 camera;
 uniform mat4 modelmatrix;
+
 uniform mat3 normalmatrix;
 
 void main()
 {
   vColor = col;
-  gl_Position = projection * camera * modelmatrix * pos;
+  gl_Position = projection * modelview * pos;
   vNormal = normalmatrix * normal;
 }
 </script>
@@ -570,7 +573,7 @@ function generateGrid( params )
 
       positions.push(u,v,0);
 
-      normals.push(0.0, 1.0, 0.0); // y up
+      normals.push(0.0, 0.0, 1.0); // z up
 
       var c = hsl2rgb(i/Nv, 0.5, 0.4);
       colors.push(c[0], c[1], c[2], 1);
@@ -695,6 +698,10 @@ function initContext(id)
     // modelmatrix
     var u_modelmatrix = gl.getUniformLocation(program, "modelmatrix");
     context.u_modelmatrix = u_modelmatrix;
+
+    // modelview
+    var u_modelview = gl.getUniformLocation(program, "modelview");
+    context.u_modelview = u_modelmatrix;
 
     // normalmatrix
     var u_normalmatrix = gl.getUniformLocation(program, "normalmatrix");
@@ -884,6 +891,12 @@ function initContext(id)
       // position
       gl.uniformMatrix4fv(u_modelmatrix, false, shape.modelmatrix );
 
+      // modelview
+      gl.uniformMatrix4fv(u_modelview, false, shape.modelview );
+
+      // normal matrix
+      gl.uniformMatrix3fv(u_normalmatrix, false, shape.normalmatrix );
+
       // ui options for drawing
       if (shape.params.drawLines == true)
       {
@@ -911,7 +924,7 @@ function initContext(id)
         shape.modelview = mat4.create();
       }
 
-      mat4.multiply(shape.modelview, camera, shape.modelmatrix);
+      mat4.multiply(shape.modelview, context.camera, shape.modelmatrix);
       mat3.normalFromMat4(shape.normalmatrix, shape.modelview);
     }
 
@@ -1209,8 +1222,10 @@ function initContext(id)
       // draw all shapes in scene
       for (shape in scene)
       {
-        updateSceneObjectModelViewMatrix(shape);
-        scene[shape].params.draw(scene[shape]);
+        var s = scene[shape];
+
+        updateSceneObjectModelViewMatrix(s);
+        s.params.draw(s);
       }
 
       return renderContinous; // true for continous animation, false for no update required
