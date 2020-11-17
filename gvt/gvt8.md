@@ -28,7 +28,7 @@ Scene Keybinds
 * `I` - Move Light 1
 * `L` - Move Light 2
 
-## WebGL Lighting / Cartoon-Shader
+## WebGL Phong-Lighting / Cartoon-Shader
 <canvas id="wgl" width="768" height="768" style="outline: grey 2px solid;"></canvas>
 
 <script id="wgl_vertex" type="nojs">
@@ -135,6 +135,42 @@ float transformZ(float z)
   return inv / difZ;
 }
 
+// Colorspace conversion based on https://www.shadertoy.com/view/4dKcWK - for cartoon shader
+const float EPSILON = 1e-10;
+vec3 RGBtoHCV(in vec3 rgb)
+{
+    // RGB [0..1] to Hue-Chroma-Value [0..1]
+    // Based on work by Sam Hocevar and Emil Persson
+    vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
+    vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
+    float c = q.x - min(q.w, q.y);
+    float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
+    return vec3(h, c, q.x);
+}
+vec3 RGBtoHSL(in vec3 rgb)
+{
+    // RGB [0..1] to Hue-Saturation-Lightness [0..1]
+    vec3 hcv = RGBtoHCV(rgb);
+    float z = hcv.z - hcv.y * 0.5;
+    float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
+    return vec3(hcv.x, s, z);
+}
+vec3 HUEtoRGB(in float hue)
+{
+    // Hue [0..1] to RGB [0..1]
+    // See http://www.chilliant.com/rgb2hsv.html
+    vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
+    return clamp(rgb, 0., 1.);
+}
+vec3 HSLtoRGB(in vec3 hsl)
+{
+    // Hue-Saturation-Lightness [0..1] to RGB [0..1]
+    vec3 rgb = HUEtoRGB(hsl.x);
+    float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
+    return (rgb - 0.5) * c + hsl.z;
+}
+
+
 void main()
 {
   if (renderStyle == 1)
@@ -151,6 +187,62 @@ void main()
   {
     // phong (task 8)
     gl_FragColor = vec4( phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz)), 1.0);
+  }
+  else if (renderStyle == 4)
+  {
+    // phong (task 8)
+    vec3 pcolor = phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz));
+    vec3 pcartoon = RGBtoHSL(pcolor);
+
+    vec3 vd;
+    vd[0] = 0.0;
+    vd[1] = 0.0;
+    vd[2] = -1.0;
+
+    // 0=hue, 1=saturation, 2=light
+    if( pcartoon[2] > 0.8)
+    {
+      pcartoon[2] = 1.0;
+    }
+    else if( pcartoon[2] > 0.3)
+    {
+      pcartoon[2] = 0.5;
+    }
+    else
+    {
+      pcartoon[2] = 0.3;
+    }
+    
+    vec3 fcartoon = HSLtoRGB(pcartoon);
+
+    if( dot(vd, vNormal) > -0.2 )
+    {
+      fcartoon.r = 0.0;
+      fcartoon.g = 0.0;
+      fcartoon.b = 0.0;
+    }
+/*
+    if (vNormal.r > 0.9 || vNormal.r < -0.9)
+    {
+      fcartoon.r = 0.0;
+      fcartoon.g = 0.0;
+      fcartoon.b = 0.0;
+    }
+    if (vNormal.g > 0.9 || vNormal.g < -0.9)
+    {
+      fcartoon.r = 0.0;
+      fcartoon.g = 0.0;
+      fcartoon.b = 0.0;
+    }
+
+    if (vNormal.b < -0.9)
+    {
+      fcartoon.r = 0.0;
+      fcartoon.g = 0.0;
+      fcartoon.b = 0.0;
+    }*/
+
+    gl_FragColor = vec4(fcartoon, 1.0);
   }
   else
   {
@@ -787,11 +879,11 @@ function initContext(id)
     var u_normalmatrix = gl.getUniformLocation(program, "normalmatrix");
     context.u_normalmatrix = u_normalmatrix;
 
-    // ambient light
+    // ambient light (task 8)
     context.u_ambientLight = gl.getUniformLocation(program, "ambientLight");
     context.ambientLight = [0.4, 0.4, 0.4];
 
-    // phong lights
+    // phong lights (task 8)
     context.maxLights = 2;
     context.u_light = [];
     context.light = [];
@@ -810,7 +902,7 @@ function initContext(id)
       });
     }
 
-    // material
+    // material (task 8)
     context.u_materialKa = gl.getUniformLocation(program, "material.ka");
     context.u_materialKd = gl.getUniformLocation(program, "material.kd");
     context.u_materialKs = gl.getUniformLocation(program, "material.ks");
@@ -831,7 +923,7 @@ function initContext(id)
     gl.uniform2fv(u_cameraZ, cameraZ );
 
     // render style
-    context.renderStyle = 1;
+    context.renderStyle = 3;
     var u_renderStyle = gl.getUniformLocation(program, "renderStyle");
     context.u_renderStyle = u_renderStyle;
 
