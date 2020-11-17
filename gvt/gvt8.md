@@ -39,6 +39,7 @@ attribute vec4 col;
 varying vec4 vPosition;
 varying vec4 vColor;
 varying vec3 vNormal;
+varying vec3 vDir; //
 
 uniform mat4 projection;
 
@@ -57,6 +58,8 @@ void main()
   gl_Position = projection * vPosition;
 
   vNormal = normalize(normalmatrix * normal);
+  vDir = normalize(projection * vec4(0.0,0.0,1.0,1.0)).xyz;
+  //vDir = vec3(0.0,0.0,-1.0);
 }
 </script>
 
@@ -66,6 +69,7 @@ precision mediump float;
 varying vec4 vPosition;
 varying vec4 vColor;
 varying vec3 vNormal;
+varying vec3 vDir;
 
 uniform int renderStyle;
 
@@ -192,55 +196,41 @@ void main()
   {
     // phong (task 8)
     vec3 pcolor = phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz));
-    vec3 pcartoon = RGBtoHSL(pcolor);
+    vec3 dcartoon = RGBtoHSL(material.kd);
 
-    vec3 vd;
-    vd[0] = 0.0;
-    vd[1] = 0.0;
-    vd[2] = -1.0;
+
+    float colorL = length(pcolor);
 
     // 0=hue, 1=saturation, 2=light
-    if( pcartoon[2] > 0.8)
+    if( colorL > 0.9)
     {
-      pcartoon[2] = 1.0;
+      dcartoon[2] = 0.8;
     }
-    else if( pcartoon[2] > 0.3)
+    else if( colorL > 0.5)
     {
-      pcartoon[2] = 0.5;
+      dcartoon[2] = 0.6;
     }
     else
     {
-      pcartoon[2] = 0.3;
+      dcartoon[2] = 0.4;
     }
     
-    vec3 fcartoon = HSLtoRGB(pcartoon);
+    vec3 fcartoon;
 
-    if( dot(vd, vNormal) > -0.2 )
+    //vec3 vd;
+    //vd[0] = 0.0;
+    //vd[1] = 0.0;
+    //vd[2] = -1.0;
+    if( dot(vDir, vNormal) > -0.2 )
     {
       fcartoon.r = 0.0;
       fcartoon.g = 0.0;
       fcartoon.b = 0.0;
     }
-/*
-    if (vNormal.r > 0.9 || vNormal.r < -0.9)
+    else
     {
-      fcartoon.r = 0.0;
-      fcartoon.g = 0.0;
-      fcartoon.b = 0.0;
+      fcartoon = HSLtoRGB(dcartoon);
     }
-    if (vNormal.g > 0.9 || vNormal.g < -0.9)
-    {
-      fcartoon.r = 0.0;
-      fcartoon.g = 0.0;
-      fcartoon.b = 0.0;
-    }
-
-    if (vNormal.b < -0.9)
-    {
-      fcartoon.r = 0.0;
-      fcartoon.g = 0.0;
-      fcartoon.b = 0.0;
-    }*/
 
     gl_FragColor = vec4(fcartoon, 1.0);
   }
