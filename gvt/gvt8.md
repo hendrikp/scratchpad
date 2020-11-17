@@ -7,12 +7,12 @@
 
 Use controls at top to change parameters.
 
-Render-Styles
+Render-Styles (use control `renderStyle`)
 * `0` - Vertex Color
 * `1` - Z-Depth
 * `2` - Normals
-* `3` - Phong-Lighting
-* `4` - Cartoon Shading
+* `3` - **Phong-Lighting (Task 8)**
+* `4` - **Cartoon Shading (Task 8 Extension)**
 
 Keybinds (Standard FPS/Fly Controls)
 * Hold `Shift` to move faster
@@ -24,9 +24,9 @@ Keybinds (Standard FPS/Fly Controls)
 * `C` - Move Camera Down
 * Drag Canvas with mouse to rotate camera
 
-Scene Keybinds
-* `I` - Move Light 1
-* `L` - Move Light 2
+Scene Keybinds (or use control `lightAngle`)
+* `I` - Rotate Lights forward
+* `L` - Rotate Lights backward
 
 ## WebGL Phong-Lighting / Cartoon-Shader
 <canvas id="wgl" width="768" height="768" style="outline: grey 2px solid;"></canvas>
@@ -388,6 +388,25 @@ function hsl2rgb(h, s, l)
     }
 
     return [r,g,b];
+}
+
+// camera/rotation helpers
+function normalizeRad(r)
+{
+  while (r < 0)
+    r += Math.PI*2;
+  while (r >= Math.PI*2)
+    r -= Math.PI*2;
+  return r;
+}
+
+function restrainPitch(r)
+{
+  if (r < -Math.PI*0.5)
+    r = -Math.PI*0.5;
+  if (r > Math.PI*0.5)
+    r = Math.PI*0.5;
+  return r;
 }
 
 // generate data
@@ -1373,6 +1392,30 @@ function initContext(id)
     // task 7 z-Depth visualization
     gui.add(context, "renderStyle", 0, 4, 1);
 
+    // task 8-dummy visualization of lights (optional)
+    var dummyLight1 = createSceneObject({
+      name: 'light1',
+      generator: generateIcosphere,
+      posOrigin: [0, 0.0, 0.0],
+      scale: [0.05, 0.05, 0.05],
+      rotate: [0.0, 0.0, 0.0],
+      N: 0,
+      drawLines: true,
+      draw: drawElements,
+      mat: createPhongMaterial({diffuse:[1.,1.,1],outline: false,}), // white
+    });
+    var dummyLight2 = createSceneObject({
+      name: 'light2',
+      generator: generateIcosphere,
+      posOrigin: [0, 0.0, 0.0],
+      scale: [0.05, 0.05, 0.05],
+      rotate: [0.0, 0.0, 0.0],
+      N: 0,
+      drawLines: true,
+      draw: drawElements,
+      mat: createPhongMaterial({diffuse:[1.,1.,1],outline: false,}), // white
+    });
+
     // based on https://de.wikipedia.org/wiki/Lemniskate_von_Bernoulli
     function infinityRotatePath(shape, speed, tTotal, offset, offset2)
     {
@@ -1435,36 +1478,57 @@ function initContext(id)
       rotateTorus(sceneTorus, 0.5 * (speed/Math.PI), tTotal, 0, -Math.PI*0.5 ); 
     }
 
+    // Task 8
     // enable light 1
     context.light[0].active = true;
     context.light[0].color = [1,1,1];
-    context.light[0].position = [0, -2, -2];
+    context.light[0].dummy = scene["light1"];
 
     // enable light 2
     context.light[1].active = true;
-    context.light[1].position = [0, 2, 2];
     context.light[1].color = [1,1,1];
+    context.light[1].dummy = scene["light2"];
+
+    context.lightAngle = 0.0;
+    gui.add(context, "lightAngle", 0.0, Math.PI*2.0, 0.01).listen();
 
     function updateLights()
     {
-        // ambient
-        gl.uniform3fv(context.u_ambientLight, context.ambientLight);
+      {
+        // scene specific light animation/handling
 
-        for (var i = 0; i < context.light.length; i++)
+        // update positions in circles
+        var l = context.light[0];
+        l.position[0] = Math.cos(context.lightAngle);
+        l.position[1] = Math.sin(context.lightAngle);
+        l.dummy.params.pos = l.position;
+        updateSceneObjectMatrix(l.dummy);
+
+        l = context.light[1];
+        l.position[0] = Math.cos(context.lightAngle);
+        l.position[2] = Math.sin(context.lightAngle);
+        l.dummy.params.pos = l.position;
+        updateSceneObjectMatrix(l.dummy);
+      }
+
+      // ambient
+      gl.uniform3fv(context.u_ambientLight, context.ambientLight);
+
+      for (var i = 0; i < context.light.length; i++)
+      {
+        var l = context.light[i];
+        var lu = l.u;
+        gl.uniform1i(lu.active, l.active);
+
+        if (l.active)
         {
-          var l = context.light[i];
-          var lu = l.u;
-          gl.uniform1i(lu.active, l.active);
+          gl.uniform3fv(lu.color, l.color);
 
-          if (l.active)
-          {
-            gl.uniform3fv(lu.color, l.color);
-
-            // transform light to camera space
-            vec3.transformMat4(l.tpos, l.position, context.camera);
-            gl.uniform3fv(lu.position, l.tpos);
-          }
+          // transform light to camera space
+          vec3.transformMat4(l.tpos, l.position, context.camera);
+          gl.uniform3fv(lu.position, l.tpos);
         }
+      }
     }
 
     // draw task
@@ -1547,6 +1611,15 @@ window.onkeydown = function(evt)
   {
     ct[1]=change;
   }
+  // task 8 rotate lights
+  else if(c == 'L')
+  {
+    context.lightAngle = normalizeRad(context.lightAngle + change*5);
+  }
+  else if(c == 'I')
+  {
+    context.lightAngle = normalizeRad(context.lightAngle - change*5);
+  }
 
   // we want to move relative to viewing direction
   var transformDir = mat4.clone(context.cameraRotation);
@@ -1556,25 +1629,6 @@ window.onkeydown = function(evt)
   vec3.add(context.cameraPos, context.cameraPos, ct);
   context.updateCamera();
 };
-
-
-function normalizeRad(r)
-{
-  while (r < 0)
-    r += Math.PI*2;
-  while (r >= Math.PI*2)
-    r -= Math.PI*2;
-  return r;
-}
-
-function restrainPitch(r)
-{
-  if (r < -Math.PI*0.5)
-    r = -Math.PI*0.5;
-  if (r > Math.PI*0.5)
-    r = Math.PI*0.5;
-  return r;
-}
 
 // Camera/Mouse handler
 function mouseDrag(evt)
