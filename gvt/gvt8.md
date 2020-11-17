@@ -1489,7 +1489,7 @@ function initContext(id)
     context.light[1].color = [1,1,1];
     context.light[1].dummy = scene["light2"];
 
-    context.lightAngle = 0.0;
+    context.lightAngle = Math.PI*1.5;
     gui.add(context, "lightAngle", 0.0, Math.PI*2.0, 0.01).listen();
 
     function updateLights()
