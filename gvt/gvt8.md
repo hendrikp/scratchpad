@@ -789,7 +789,7 @@ function initContext(id)
 
     // ambient light
     context.u_ambientLight = gl.getUniformLocation(program, "ambientLight");
-    context.ambientLight = [0.5, 0.5, 0.5];
+    context.ambientLight = [0.4, 0.4, 0.4];
 
     // phong lights
     context.maxLights = 2;
@@ -800,6 +800,7 @@ function initContext(id)
       context.light.push({
         active:   false,
         position: [0, 0, 0],
+        tpos:     vec3.create(),
         color:    [1, 1, 1],
         u: {
           active:   gl.getUniformLocation(program, "light[" + i + "].active"),
@@ -1333,11 +1334,34 @@ function initContext(id)
     // enable light 1
     context.light[0].active = true;
     context.light[0].color = [1,1,1];
+    context.light[0].position = [0, -2, -2];
 
     // enable light 2
     context.light[1].active = true;
-    context.light[1].position = [0, 0, 1.3];
+    context.light[1].position = [0, 2, 2];
     context.light[1].color = [1,1,1];
+
+    function updateLights()
+    {
+        // ambient
+        gl.uniform3fv(context.u_ambientLight, context.ambientLight);
+
+        for (var i = 0; i < context.light.length; i++)
+        {
+          var l = context.light[i];
+          var lu = l.u;
+          gl.uniform1i(lu.active, l.active);
+
+          if (l.active)
+          {
+            gl.uniform3fv(lu.color, l.color);
+
+            // transform light to camera space
+            vec3.transformMat4(l.tpos, l.position, context.camera);
+            gl.uniform3fv(lu.position, l.tpos);
+          }
+        }
+    }
 
     // draw task
     context.render = function(elapsed, tTotal)
@@ -1355,22 +1379,7 @@ function initContext(id)
       // update lights
       if (context.renderStyle >= 3 && context.renderStyle <= 4)
       {
-        // ambient
-        gl.uniform3fv(context.u_ambientLight, context.ambientLight);
-
-        for (var i = 0; i < context.light.length; i++)
-        {
-          var l = context.light[i];
-          var lu = l.u;
-          gl.uniform1i(lu.active, l.active);
-
-          if (l.active)
-          {
-            gl.uniform3fv(lu.position, l.position); // TODO transform
-
-            gl.uniform3fv(lu.color, l.color);
-          }
-        }
+        updateLights();
       }
 
       // draw all shapes in scene
