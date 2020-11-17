@@ -39,7 +39,6 @@ attribute vec4 col;
 varying vec4 vPosition;
 varying vec4 vColor;
 varying vec3 vNormal;
-varying vec3 vDir; //
 
 uniform mat4 projection;
 
@@ -58,8 +57,6 @@ void main()
   gl_Position = projection * vPosition;
 
   vNormal = normalize(normalmatrix * normal);
-  vDir = normalize(projection * vec4(0.0,0.0,1.0,1.0)).xyz;
-  //vDir = vec3(0.0,0.0,-1.0);
 }
 </script>
 
@@ -69,7 +66,6 @@ precision mediump float;
 varying vec4 vPosition;
 varying vec4 vColor;
 varying vec3 vNormal;
-varying vec3 vDir;
 
 uniform int renderStyle;
 
@@ -79,7 +75,8 @@ struct PhongMaterial
   vec3 ka;
   vec3 kd;
   vec3 ks;
-  float ke; 
+  float ke;
+  bool outline; // task8 ext cartoon
 };
 uniform PhongMaterial material;
 
@@ -194,34 +191,12 @@ void main()
   }
   else if (renderStyle == 4)
   {
-    // phong (task 8)
-    vec3 pcolor = phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz));
-    vec3 dcartoon = RGBtoHSL(material.kd);
-
-
-    float colorL = length(pcolor);
-
-    // 0=hue, 1=saturation, 2=light
-    if( colorL > 0.9)
-    {
-      dcartoon[2] = 0.8;
-    }
-    else if( colorL > 0.5)
-    {
-      dcartoon[2] = 0.6;
-    }
-    else
-    {
-      dcartoon[2] = 0.4;
-    }
-    
+    // cartoon (task 8 extension)
     vec3 fcartoon;
 
-    //vec3 vd;
-    //vd[0] = 0.0;
-    //vd[1] = 0.0;
-    //vd[2] = -1.0;
-    if( dot(vDir, vNormal) > -0.2 )
+    // Outline
+    vec3 viewDir = normalize(vPosition.xyz);
+    if( material.outline && dot(viewDir, vNormal) > -0.25 )
     {
       fcartoon.r = 0.0;
       fcartoon.g = 0.0;
@@ -229,6 +204,26 @@ void main()
     }
     else
     {
+      // phong (task 8)
+      vec3 pcolor = phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz));
+      vec3 dcartoon = RGBtoHSL(material.kd);
+
+      float colorL = length(pcolor);
+
+      // 0=hue, 1=saturation, 2=light
+      if( colorL > 0.9)
+      {
+        dcartoon[2] = 0.8;
+      }
+      else if( colorL > 0.5)
+      {
+        dcartoon[2] = 0.6;
+      }
+      else
+      {
+        dcartoon[2] = 0.4;
+      }
+
       fcartoon = HSLtoRGB(dcartoon);
     }
 
@@ -801,6 +796,7 @@ function createPhongMaterial(material) {
   material.kd = material.kd || [ 0.6, 0.6, 0.6 ];
   material.ks = material.ks || [ 0.8, 0.8, 0.8 ];
   material.ke = material.ke || 10.;
+  material.outline = material.outline === undefined ? false : material.outline;
 
   return material;
 }
@@ -897,6 +893,7 @@ function initContext(id)
     context.u_materialKd = gl.getUniformLocation(program, "material.kd");
     context.u_materialKs = gl.getUniformLocation(program, "material.ks");
     context.u_materialKe = gl.getUniformLocation(program, "material.ke");
+    context.u_materialOutline = gl.getUniformLocation(program, "material.outline");
 
     // projection
     var u_projection = gl.getUniformLocation(program, "projection");
@@ -1095,6 +1092,7 @@ function initContext(id)
         gl.uniform3fv(context.u_materialKd, shape.params.mat.kd);
         gl.uniform3fv(context.u_materialKs, shape.params.mat.ks);
         gl.uniform1f( context.u_materialKe, shape.params.mat.ke);
+        gl.uniform1i( context.u_materialOutline, shape.params.mat.outline);
       }
 
       // ui options for drawing
@@ -1216,10 +1214,10 @@ function initContext(id)
       scale: [0.5, 0.5, 0.5],
       rotate: [0, 0, 0],
       r: 0.1, R: 1.0,
-      Nu: 35, Nv: 20,
+      Nu: 50, Nv: 40,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial(),
+      mat: createPhongMaterial({outline: true}),
     });
     /*
     var ui = gui.addFolder('Torus - 4.1+2');
@@ -1278,7 +1276,7 @@ function initContext(id)
       N: 3,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({kd:[1.,1.,0.]}), // yellow
+      mat: createPhongMaterial({kd:[1.,1.,0.],outline: true,}), // yellow
     });
     /*
     var ui = gui.addFolder('Icosphere - 5');
@@ -1293,7 +1291,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({kd:[0.,1.,0.]}), // green
+      mat: createPhongMaterial({kd:[0.,1.,0.],outline: true,}), // green
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
@@ -1301,7 +1299,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({kd:[1.,0.,0.]}), // red
+      mat: createPhongMaterial({kd:[1.,0.,0.],outline: true,}), // red
     });
     var sphere4 = duplicateSceneObject(sphere, {
       name: 'sphere4',
@@ -1309,7 +1307,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({kd:[0.,0.,1.]}), // blue
+      mat: createPhongMaterial({kd:[0.,0.,1.],outline: true,}), // blue
     });
 
     // 7. add more interecting shapes for Z-Visualization
@@ -1338,7 +1336,7 @@ function initContext(id)
       scale: [1.0, 1.0, 1.0],
       rotate: [0, 0 , 0.0],
       drawLines: false,
-      mat: createPhongMaterial(),
+      mat: createPhongMaterial({outline: true}),
     });
 
     // reset camera gui
