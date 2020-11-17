@@ -72,10 +72,10 @@ uniform int renderStyle;
 // Material // Task 8 Phong
 struct PhongMaterial
 {
-  vec3 ka;
-  vec3 kd;
-  vec3 ks;
-  float ke;
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+  float shininess;
   bool outline; // task8 ext cartoon
 };
 uniform PhongMaterial material;
@@ -104,9 +104,9 @@ vec3 phong(vec3 p, vec3 n, vec3 v, Light l)
   float sn = max( dot(s,n), 0.0);
   float rv = max( dot(r,v), 0.0);
       
-  vec3 diffuse = material.kd * L * sn;
+  vec3 diffuse = material.diffuse * L * sn;
               
-  vec3 specular = material.ks * L * pow(rv, material.ke);
+  vec3 specular = material.specular * L * pow(rv, material.shininess);
 
   return diffuse + specular;			
 }
@@ -115,7 +115,7 @@ vec3 phong(vec3 p, vec3 n, vec3 v, Light l)
 vec3 phong(vec3 p, vec3 n, vec3 v)
 {
   // ambient light
-  vec3 result = material.ka * ambientLight;
+  vec3 result = material.ambient * ambientLight;
 
   // light from sources
   for (int i=0; i < MAX_LIGHTS; i++)
@@ -136,7 +136,7 @@ float transformZ(float z)
   return inv / difZ;
 }
 
-// Colorspace conversion based on https://www.shadertoy.com/view/4dKcWK - for cartoon shader
+// Colorspace conversion from on https://www.shadertoy.com/view/4dKcWK - for cartoon shading
 const float EPSILON = 1e-10;
 vec3 RGBtoHCV(in vec3 rgb)
 {
@@ -171,6 +171,7 @@ vec3 HSLtoRGB(in vec3 hsl)
     return (rgb - 0.5) * c + hsl.z;
 }
 
+const vec3 outlineColor = vec3(0.1,0.1,0.3); // for toon shader slightly blue black
 
 void main()
 {
@@ -191,26 +192,43 @@ void main()
   }
   else if (renderStyle == 4)
   {
-    // cartoon (task 8 extension)
+    // Cartoon (task 8 extension)
     vec3 fcartoon;
 
-    // Outline
+    // Optional Outline
+    // Outline is shown using dot product of fragment normal and direction of fragment pos to camera
     vec3 viewDir = normalize(vPosition.xyz);
     if( material.outline && dot(viewDir, vNormal) > -0.25 )
     {
-      fcartoon.r = 0.0;
-      fcartoon.g = 0.0;
-      fcartoon.b = 0.0;
+      fcartoon = outlineColor;
     }
     else
     {
-      // phong (task 8)
+      // use phong shading as base for the cartoon shader
       vec3 pcolor = phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz));
-      vec3 dcartoon = RGBtoHSL(material.kd);
 
-      float colorL = length(pcolor);
+      // simple brightness
+      float colorL = length(pcolor); 
 
+      /*
+      // Simpler version without color conversion, doesnt look as good thus use HSL colorspace
+      if( colorL > 0.9)
+      {
+        fcartoon = clamp(material.diffuse * 2.0, 0.0, 1.0);
+      }
+      else if( colorL > 0.5)
+      {
+        fcartoon = clamp(material.diffuse, 0.0, 1.0);
+      }
+      else
+      {
+        fcartoon = clamp(material.diffuse * 0.6, 0.0, 1.0);
+      }
+      */
+
+      // new more complex HSL colorspace based cartoon shading
       // 0=hue, 1=saturation, 2=light
+      vec3 dcartoon = RGBtoHSL(material.diffuse);
       if( colorL > 0.9)
       {
         dcartoon[2] = 0.8;
@@ -223,7 +241,6 @@ void main()
       {
         dcartoon[2] = 0.4;
       }
-
       fcartoon = HSLtoRGB(dcartoon);
     }
 
@@ -792,10 +809,10 @@ function createPhongMaterial(material) {
   material = material || {};
 
   // defaults
-  material.ka = material.ka || [ 0.3, 0.3, 0.3 ];
-  material.kd = material.kd || [ 0.6, 0.6, 0.6 ];
-  material.ks = material.ks || [ 0.8, 0.8, 0.8 ];
-  material.ke = material.ke || 10.;
+  material.ambient = material.ambient || [ 0.3, 0.3, 0.3 ];
+  material.diffuse = material.diffuse || [ 0.6, 0.6, 0.6 ];
+  material.specular = material.specular || [ 0.8, 0.8, 0.8 ];
+  material.shininess = material.shininess || 10.;
   material.outline = material.outline === undefined ? false : material.outline;
 
   return material;
@@ -809,8 +826,15 @@ function initContext(id)
 
   function cleanBg()
   {
+    if (context.renderStyle >= 3 && context.renderStyle <= 4)
+    {
+       gl.clearColor(context.ambientLight[0], context.ambientLight[1], context.ambientLight[2], 1);
+    }
+    else
+    {
       gl.clearColor(1, 1, 1, 1); // white
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
   if (gl)
@@ -889,10 +913,10 @@ function initContext(id)
     }
 
     // material (task 8)
-    context.u_materialKa = gl.getUniformLocation(program, "material.ka");
-    context.u_materialKd = gl.getUniformLocation(program, "material.kd");
-    context.u_materialKs = gl.getUniformLocation(program, "material.ks");
-    context.u_materialKe = gl.getUniformLocation(program, "material.ke");
+    context.u_materialAmbient = gl.getUniformLocation(program, "material.ambient");
+    context.u_materialDiffuse = gl.getUniformLocation(program, "material.diffuse");
+    context.u_materialSpecular = gl.getUniformLocation(program, "material.specular");
+    context.u_materialShininess = gl.getUniformLocation(program, "material.shininess");
     context.u_materialOutline = gl.getUniformLocation(program, "material.outline");
 
     // projection
@@ -1088,10 +1112,10 @@ function initContext(id)
       // phong material
       if (shape.params.mat)
       {
-        gl.uniform3fv(context.u_materialKa, shape.params.mat.ka);
-        gl.uniform3fv(context.u_materialKd, shape.params.mat.kd);
-        gl.uniform3fv(context.u_materialKs, shape.params.mat.ks);
-        gl.uniform1f( context.u_materialKe, shape.params.mat.ke);
+        gl.uniform3fv(context.u_materialAmbient, shape.params.mat.ambient);
+        gl.uniform3fv(context.u_materialDiffuse, shape.params.mat.diffuse);
+        gl.uniform3fv(context.u_materialSpecular, shape.params.mat.specular);
+        gl.uniform1f( context.u_materialShininess, shape.params.mat.shininess);
         gl.uniform1i( context.u_materialOutline, shape.params.mat.outline);
       }
 
@@ -1276,7 +1300,7 @@ function initContext(id)
       N: 3,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({kd:[1.,1.,0.],outline: true,}), // yellow
+      mat: createPhongMaterial({diffuse:[1.,1.,0.],outline: true,}), // yellow
     });
     /*
     var ui = gui.addFolder('Icosphere - 5');
@@ -1291,7 +1315,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({kd:[0.,1.,0.],outline: true,}), // green
+      mat: createPhongMaterial({diffuse:[0.,1.,0.],outline: true,}), // green
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
@@ -1299,7 +1323,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({kd:[1.,0.,0.],outline: true,}), // red
+      mat: createPhongMaterial({diffuse:[1.,0.,0.],outline: true,}), // red
     });
     var sphere4 = duplicateSceneObject(sphere, {
       name: 'sphere4',
@@ -1307,7 +1331,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({kd:[0.,0.,1.],outline: true,}), // blue
+      mat: createPhongMaterial({diffuse:[0.,0.,1.],outline: true,}), // blue
     });
 
     // 7. add more interecting shapes for Z-Visualization
@@ -1333,7 +1357,7 @@ function initContext(id)
     var torus2 = duplicateSceneObject(torus, {
       name: 'torus2',
       posOrigin: [0, 0.0, 0.0],
-      scale: [1.0, 1.0, 1.0],
+      scale: [1.25, 0.7, 1.0],
       rotate: [0, 0 , 0.0],
       drawLines: false,
       mat: createPhongMaterial({outline: true}),
