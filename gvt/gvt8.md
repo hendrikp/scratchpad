@@ -194,18 +194,18 @@ void main()
   {
     // Cartoon (task 8 extension)
     vec3 fcartoon;
-
+    vec3 normal = normalize(vNormal);
     // Optional Outline
     // Outline is shown using dot product of fragment normal and direction of fragment pos to camera
     vec3 viewDir = normalize(vPosition.xyz);
-    if( material.outline && dot(viewDir, vNormal) > -0.25 )
+    if( material.outline && dot(viewDir, normal) > -0.25 )
     {
       fcartoon = outlineColor;
     }
     else
     {
       // use phong shading as base for the cartoon shader
-      vec3 pcolor = phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz));
+      vec3 pcolor = phong(vPosition.xyz, normal, -viewDir);
 
       // simple brightness
       float colorL = length(pcolor); 
