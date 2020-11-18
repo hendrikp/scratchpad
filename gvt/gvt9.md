@@ -36,10 +36,12 @@ Scene Keybinds (or use control `lightAngle`)
 attribute vec4 pos;
 attribute vec3 normal;
 attribute vec4 col;
+attribute vec2 texpos;
 
 varying vec4 vPosition;
 varying vec4 vColor;
 varying vec3 vNormal;
+varying vec2 vTexPosition;
 
 uniform mat4 projection;
 
@@ -52,6 +54,7 @@ uniform mat3 normalmatrix;
 void main()
 {
   vColor = col;
+  vTexPosition = texpos;
 
   // gl_Position = projection * camera * modelmatrix * pos; // use precalulate modelview now.. (as needed for normalmatrix too)
   vPosition = modelview * pos;
@@ -67,6 +70,7 @@ precision mediump float;
 varying vec4 vPosition;
 varying vec4 vColor;
 varying vec3 vNormal;
+varying vec2 vTexPosition;
 
 uniform int renderStyle;
 
@@ -78,6 +82,8 @@ struct PhongMaterial
   vec3 specular;
   float shininess;
   bool outline; // task8 ext cartoon
+  sampler2D diffuseTexture; // task9
+  float textureScale;
 };
 uniform PhongMaterial material;
 
@@ -95,7 +101,7 @@ uniform Light light[MAX_LIGHTS];
 uniform vec2 cameraZ; // z-depth (task 7)
 
 // Phong illumination for single light source, no ambient light. (BEL-3)
-vec3 phong(vec3 p, vec3 n, vec3 v, Light l)
+vec3 phong(vec3 diffuse, vec3 p, vec3 n, vec3 v, Light l)
 {
   vec3 L = l.color;
 
@@ -105,7 +111,7 @@ vec3 phong(vec3 p, vec3 n, vec3 v, Light l)
   float sn = max( dot(s,n), 0.0);
   float rv = max( dot(r,v), 0.0);
       
-  vec3 diffuse = material.diffuse * L * sn;
+  diffuse *= L * sn;
               
   vec3 specular = material.specular * L * pow(rv, material.shininess);
 
@@ -113,7 +119,7 @@ vec3 phong(vec3 p, vec3 n, vec3 v, Light l)
 }
 
 // add up ambient light and lights 
-vec3 phong(vec3 p, vec3 n, vec3 v)
+vec3 phong(vec3 diffuse, vec3 p, vec3 n, vec3 v)
 {
   // ambient light
   vec3 result = material.ambient * ambientLight;
@@ -123,7 +129,7 @@ vec3 phong(vec3 p, vec3 n, vec3 v)
   {
     if (light[i].active)
     {
-      result += phong(p, n, v, light[i]);
+      result += phong(diffuse, p, n, v, light[i]);
     }
   }
   return result;
@@ -189,7 +195,7 @@ void main()
   else if (renderStyle == 3)
   {
     // phong (task 8)
-    gl_FragColor = vec4( phong(vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz)), 1.0);
+    gl_FragColor = vec4( phong(material.diffuse, vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz)), 1.0);
   }
   else if (renderStyle == 4)
   {
@@ -206,7 +212,7 @@ void main()
     else
     {
       // use phong shading as base for the cartoon shader
-      vec3 pcolor = phong(vPosition.xyz, normal, -viewDir);
+      vec3 pcolor = phong(material.diffuse, vPosition.xyz, normal, -viewDir);
 
       // simple brightness
       float colorL = length(pcolor); 
@@ -246,6 +252,11 @@ void main()
     }
 
     gl_FragColor = vec4(fcartoon, 1.0);
+  }
+  else if (renderStyle == 5)
+  {
+    // textured (task 9) + phong
+    gl_FragColor = vec4( phong(material.diffuse, vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz)), 1.0);
   }
   else
   {
@@ -837,7 +848,21 @@ function rad2deg(r)
   return r * (180.0/Math.PI);
 }
 
-function createPhongMaterial(material) {
+
+function loadImage(material, filename)
+{
+  var imageObj = new Image();
+  imageObj.onload = function()
+  {
+    material.diffuseTextureImage = imageObj;
+  };
+  imageObj.src = filename;
+
+  return imageObj;
+}
+
+function createPhongMaterial(material)
+{
   material = material || {};
 
   // defaults
@@ -846,6 +871,17 @@ function createPhongMaterial(material) {
   material.specular = material.specular || [ 0.8, 0.8, 0.8 ];
   material.shininess = material.shininess || 10.;
   material.outline = material.outline === undefined ? false : material.outline;
+
+  material.textureScale = material.textureScale || 1.0;
+
+  // Load textures
+  if (material.diffuseTexture)
+  {
+    material.diffuseTextureImage = undefined;
+    material.diffuseTextureLoaded = undefined;
+    material.diffuseTextureUnit = undefined;
+    loadImage(material, material.diffuseTexture);
+  }
 
   return material;
 }
@@ -908,6 +944,8 @@ function initContext(id)
     context.colAttribute = colAttribute;
     var normalAttribute = gl.getAttribLocation(program, "normal");
     context.normalAttribute = normalAttribute;
+    var texposAttribute = gl.getAttribLocation(program, "texpos");
+    context.texposAttribute = texposAttribute;
 
     // modelmatrix
     var u_modelmatrix = gl.getUniformLocation(program, "modelmatrix");
@@ -950,6 +988,10 @@ function initContext(id)
     context.u_materialSpecular = gl.getUniformLocation(program, "material.specular");
     context.u_materialShininess = gl.getUniformLocation(program, "material.shininess");
     context.u_materialOutline = gl.getUniformLocation(program, "material.outline");
+
+    // task 9
+    context.u_materialDiffuseTexture = gl.getUniformLocation(program, "material.diffuseTexture");
+    context.u_materialTextureScale = gl.getUniformLocation(program, "material.textureScale");
 
     // projection
     var u_projection = gl.getUniformLocation(program, "projection");
@@ -1078,6 +1120,33 @@ function initContext(id)
       }
     }
 
+    // creation of textures
+    context.textureUnit = 1; // 0 remains unused
+    function createTextures(shape)
+    {
+      if (shape.params.mat.diffuseTextureImage)
+      {
+        shape.params.mat.diffuseTextureUnit = context.textureUnit++;
+
+        var texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        // want textures for now to also repeat if using different texture scaling for testing
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+        // interpolation
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+
+        // Upload the image into the texture.
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, shape.params.mat.diffuseTextureImage);
+
+        // texture buffer now loaded
+        shape.params.mat.diffuseTextureLoaded = texture;
+      }
+    }
+
     /*
     // method to draw line strip
     function drawArrays(shape)
@@ -1113,12 +1182,34 @@ function initContext(id)
         createBuffers(shape);
       }
 
+      // if texture not yet created try and now loaded (cached)
+      if (shape.params.mat.diffuseTextureImage && !shape.params.mat.diffuseTextureLoaded)
+      {
+        createTexture(shape);
+      }
+
       // vertices
       if (shape.m.pBuffer)
       {
         gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.pBuffer);
         gl.enableVertexAttribArray(posAttribute);
         gl.vertexAttribPointer(posAttribute, 3, gl.FLOAT, false, 0, 0);
+      }
+      else
+      {
+        gl.disableVertexAttribArray(posAttribute);
+      }
+
+      // texture pos
+      if (shape.m.tBuffer)
+      {
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.tBuffer);
+        gl.enableVertexAttribArray(texposAttribute);
+        gl.vertexAttribPointer(texposAttribute, 2, gl.FLOAT, false, 0, 0);
+      }
+      else
+      {
+        gl.disableVertexAttribArray(texposAttribute);
       }
 
       // normals
@@ -1128,6 +1219,10 @@ function initContext(id)
         gl.enableVertexAttribArray(normalAttribute);
         gl.vertexAttribPointer(normalAttribute, 3, gl.FLOAT, false, 0, 0);
       }
+      else
+      {
+        gl.disableVertexAttribArray(normalAttribute);
+      }
 
       // colors
       if (shape.m.cBuffer)
@@ -1135,6 +1230,10 @@ function initContext(id)
         gl.bindBuffer(gl.ARRAY_BUFFER, shape.m.cBuffer);
         gl.enableVertexAttribArray(colAttribute);
         gl.vertexAttribPointer(colAttribute, 4, gl.FLOAT, false, 0, 0);
+      }
+      else
+      {
+        gl.disableVertexAttribArray(colAttribute);
       }
 
       // indices
@@ -1160,6 +1259,18 @@ function initContext(id)
         gl.uniform3fv(context.u_materialSpecular, shape.params.mat.specular);
         gl.uniform1f( context.u_materialShininess, shape.params.mat.shininess);
         gl.uniform1i( context.u_materialOutline, shape.params.mat.outline);
+
+        if( shape.params.mat.diffuseTextureUnit && shape.params.mat.diffuseTextureLoaded )
+        {
+          gl.activeTexture(gl.TEXTURE0 + shape.params.mat.diffuseTextureUnit);
+    		  gl.bindTexture(gl.TEXTURE_2D, shape.params.mat.diffuseTextureLoaded);
+          gl.uniform1i(context.u_materialDiffuseTexture, shape.params.mat.diffuseTextureUnit);
+        }
+        else
+        {
+          gl.uniform1i(context.u_materialDiffuseTexture, 0);
+        }
+        gl.uniform1f( context.u_materialTextureScale, shape.params.mat.textureScale);
       }
 
       // ui options for drawing
@@ -1260,7 +1371,7 @@ function initContext(id)
       N: 50,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial(),
+      mat: createPhongMaterial( {diffuseTexture: "uv_test.png"} ),
     });
 
     var ui = gui.addFolder('Scene Grid');
@@ -1569,7 +1680,7 @@ function initContext(id)
       gl.uniformMatrix4fv(u_camera, false, camera );
 
       // update lights
-      if (context.renderStyle >= 3 && context.renderStyle <= 4)
+      if (context.renderStyle >= 3 && context.renderStyle <= 5)
       {
         updateLights();
       }
