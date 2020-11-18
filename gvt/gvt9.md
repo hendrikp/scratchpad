@@ -1417,7 +1417,7 @@ function initContext(id)
       Nu: 50, Nv: 40,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({outline: true}),
+      mat: createPhongMaterial({outline: true, diffuseTexture: "uv_test.png", textureScale: 2.0}),
     });
     /*
     var ui = gui.addFolder('Torus - 4.1+2');
@@ -1476,7 +1476,7 @@ function initContext(id)
       N: 3,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({diffuse:[1.,1.,0.],outline: true,}), // yellow
+      mat: createPhongMaterial({diffuse:[1.,1.,0.],outline: true, diffuseTexture: "uv_test.png", textureScale: 2.0}), // yellow
     });
     /*
     var ui = gui.addFolder('Icosphere - 5');
@@ -1646,7 +1646,7 @@ function initContext(id)
     context.light[1].color = [1,1,1];
     context.light[1].dummy = scene["light2"];
 
-    context.lightAngle = Math.PI*1.5;
+    context.lightAngle = Math.PI*0.5;
     gui.add(context, "lightAngle", 0.0, Math.PI*2.0, 0.01).listen();
 
     function updateLights()
