@@ -1185,7 +1185,7 @@ function initContext(id)
       // if texture not yet created try and now loaded (cached)
       if (shape.params.mat.diffuseTextureImage && !shape.params.mat.diffuseTextureLoaded)
       {
-        createTexture(shape);
+        createTextures(shape);
       }
 
       // vertices
