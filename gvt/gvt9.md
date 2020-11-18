@@ -256,7 +256,13 @@ void main()
   else if (renderStyle == 5)
   {
     // textured (task 9) + phong
-    gl_FragColor = vec4( phong(material.diffuse, vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz)), 1.0);
+    vec3 diffuse = material.diffuse;
+    if (material.textureScale > 0.0)
+    {
+      diffuse = texture2D( material.diffuseTexture, vTexPosition * material.textureScale ).xyz;
+    }
+
+    gl_FragColor = vec4( phong(diffuse, vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz)), 1.0);
   }
   else
   {
@@ -872,15 +878,20 @@ function createPhongMaterial(material)
   material.shininess = material.shininess || 10.;
   material.outline = material.outline === undefined ? false : material.outline;
 
-  material.textureScale = material.textureScale || 1.0;
-
   // Load textures
   if (material.diffuseTexture)
   {
+    material.textureScale = material.textureScale || 1.0;
+
     material.diffuseTextureImage = undefined;
     material.diffuseTextureLoaded = undefined;
     material.diffuseTextureUnit = undefined;
     loadImage(material, material.diffuseTexture);
+  }
+  else
+  {
+    // shaders knows texture scale <= 0.0 means no texture
+    material.textureScale = material.textureScale || -1.0;
   }
 
   return material;
@@ -1000,7 +1011,7 @@ function initContext(id)
     context.projection = projection;
     var fovy = 0.5; // radians vertical
 
-    var cameraZ = [0.1, 10]; // near, far
+    var cameraZ = [0.1, 50]; // near, far
     mat4.perspective(projection, fovy, gl.canvas.width / gl.canvas.height, cameraZ[0], cameraZ[1]);
     gl.uniformMatrix4fv(u_projection, false, projection );
     // near, far for Z-depth rendering style
@@ -1120,8 +1131,15 @@ function initContext(id)
       }
     }
 
-    // creation of textures
-    context.textureUnit = 1; // 0 remains unused
+    // create a default texture (red pixel)
+    var defaultTexture = gl.createTexture();
+    defaultTexture.unit = 0;
+    context.defaultTexture = defaultTexture;
+    gl.bindTexture(gl.TEXTURE_2D, defaultTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 0, 0, 255]));
+
+    // create loading textures
+    context.textureUnit = defaultTexture.unit + 1; 
     function createTextures(shape)
     {
       if (shape.params.mat.diffuseTextureImage)
@@ -1260,16 +1278,20 @@ function initContext(id)
         gl.uniform1f( context.u_materialShininess, shape.params.mat.shininess);
         gl.uniform1i( context.u_materialOutline, shape.params.mat.outline);
 
-        if( shape.params.mat.diffuseTextureUnit && shape.params.mat.diffuseTextureLoaded )
+        // set texture, or temporary default while still loading
+        if (shape.params.mat.diffuseTextureUnit && shape.params.mat.diffuseTextureLoaded )
         {
           gl.activeTexture(gl.TEXTURE0 + shape.params.mat.diffuseTextureUnit);
     		  gl.bindTexture(gl.TEXTURE_2D, shape.params.mat.diffuseTextureLoaded);
           gl.uniform1i(context.u_materialDiffuseTexture, shape.params.mat.diffuseTextureUnit);
         }
-        else
+        else if (defaultTexture)
         {
-          gl.uniform1i(context.u_materialDiffuseTexture, 0);
+          gl.activeTexture(gl.TEXTURE0 + defaultTexture.unit);
+    		  gl.bindTexture(gl.TEXTURE_2D, defaultTexture);
+          gl.uniform1i(context.u_materialDiffuseTexture, defaultTexture.unit);
         }
+
         gl.uniform1f( context.u_materialTextureScale, shape.params.mat.textureScale);
       }
 
@@ -1371,7 +1393,7 @@ function initContext(id)
       N: 50,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial( {diffuseTexture: "uv_test.png"} ),
+      mat: createPhongMaterial( {diffuseTexture: "uv_test.png", textureScale: 5.0 }  ),
     });
 
     var ui = gui.addFolder('Scene Grid');
