@@ -29,6 +29,11 @@ Scene Keybinds (or use control `lightAngle`)
 * `I` - Rotate Lights forward
 * `L` - Rotate Lights backward
 
+Texture sources:
+* `uv_test` texture checker pattern selfcreated
+* `tile_seamless` photo made tileable with with autofill and offsetting in image editor (tutorial https://www.youtube.com/watch?v=FR3Z0zr1RaY)
+* `loading` 1x1 red pixel placeholder procedural ;)
+
 ## WebGL Texturing
 <canvas id="wgl" width="768" height="768" style="outline: grey 2px solid;"></canvas>
 
@@ -630,6 +635,92 @@ function generateUVsphere( params )
         indices.push( p[0], p[1], p[2] );
         indices.push( p[2], p[3], p[0] );
       }
+    }
+  }
+
+  return shape;
+}
+// based on http://www.songho.ca/opengl/gl_sphere.html
+function generateUVsphere2( params )
+{
+  const {N} = params;
+
+  var vertices = [];
+  var positions = [];
+  var indices = [];
+  var colors = [];
+  var normals = [];
+  var coords = [];
+
+  var pi2 = 2 * Math.PI;
+
+  var sectorCount = N;
+  var stackCount = N;
+
+  var sectorStep = pi2 / sectorCount;
+  var stackStep = Math.PI / stackCount;
+  var sectorAngle = 0;
+  var stackAngle = 0;
+
+  var shape = { m: {v: positions, n: normals, i: indices, c: colors, t: coords}, params: params, modelmatrix: glMatrix.mat4.create() };
+
+  // generate points
+  var k1 = 0;
+  var k2 = 0;
+  for (var i=0; i<=stackCount; i++)
+  {
+    k1 = i * (Nv + 1);
+    k2 = k1 + Nv + 1;
+
+    stackAngle = Math.PI * 0.5 - i * stackStep; // starting from pi/2 to -pi/2
+    var xy = Math.cos(stackAngle);
+    var z = Math.sin(stackAngle);
+
+    for (var j=0; j<=sectorCount; j++)
+    {
+      ++k1; ++k2;
+      sectorAngle = j * sectorStep;
+
+      var p = vec3.fromValues(
+        xy * Math.cos(sectorAngle),
+        xy * Math.sin(sectorAngle),
+        z
+      );
+      vec3.normalize(p, p);
+
+      positions.push( p[0], p[1], p[2] );
+
+      coords.push(
+        Math.atan2(p[2], p[0]) / pi2 + 0.5,
+        0.5 +Math.asin(p[1]) / Math.PI
+      );
+      //coords.push(j/sectorCount, i/stackCount);
+
+      // same as pos.. but flipped
+      normals.push( -p[0], -p[1], -p[2] );
+
+      var c = hsl2rgb(j/sectorCount, 0.5, 0.5);
+      colors.push(c[0], c[1], c[2], 1);
+
+      // generate triangles
+      if(i < stackCount && j < sectorCount)
+      {
+        // 2 triangles per sector excluding first and last stacks
+        // k1 => k2 => k1+1
+        if(i != 0)
+        {
+            indices.push(k1);
+            indices.push(k2);
+            indices.push(k1 + 1);
+        }
+
+        // k1+1 => k2 => k2+1
+        if(j != (stackCount-1))
+        {
+            indices.push(k1 + 1);
+            indices.push(k2);
+            indices.push(k2 + 1);
+        }
     }
   }
 
@@ -1554,7 +1645,7 @@ function initContext(id)
     var sscale = [0.1, 0.1, 0.1];
     var sphere = createSceneObject({
       name: 'sphere',
-      generator: generateUVsphere,
+      generator: generateUVsphere2,
       posOrigin: [0, 0.0, 0.0],
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
