@@ -560,6 +560,98 @@ function generateTorus( params )
   return shape;
 }
 
+// based on http://www.3d-meier.de/tut3/Seite120.html
+function generateUVsphere( params )
+{
+  const {N} = params;
+
+  var Nv = N;
+  var Nu = N;
+
+  var vertices = [];
+  var positions = [];
+  var indices = [];
+  var colors = [];
+  var normals = [];
+  var coords = [];
+
+  var pi2 = 2 * Math.PI;
+
+  var uMin = 0.0;
+  var uMax = Math.PI;
+  var vMin = 0.0;
+  var vMax = pi2;
+  
+  var du = (uMax-uMin)/Nu;
+  var dv = (vMax-vMin)/Nv;
+
+  var shape = { m: {v: positions, n: normals, i: indices, c: colors, t: coords}, params: params, modelmatrix: glMatrix.mat4.create() };
+
+  // generate points
+  for (var i=0; i<=Nu; i++)
+  {
+    for (var j=0; j<=Nv; j++)
+    {
+      var u = uMin + i * du;
+      var v = vMin + j * dv;
+
+      var p = vec3.fromValues(
+        Math.sin(u) * Math.cos(v),
+        Math.cos(u),
+        Math.sin(u) * Math.sin(v)
+      );
+      vec3.normalize(p, p);
+
+      positions.push( p[0], p[1], p[2] );
+
+      coords.push(
+        Math.atan2(p[2], p[0]) / pi2 + 0.5,
+        0.5 +Math.asin(p[1]) / Math.PI
+      );
+      //coords.push(u/uMax, v/vMax);
+
+      // same as pos.. but flipped
+      normals.push( -p[0], -p[1], -p[2] );
+
+      var c = hsl2rgb(j/Nv, 0.5, 0.5);
+      colors.push(c[0], c[1], c[2], 1);
+
+      // generate triangles
+      if(i < Nu && j <= Nv)
+      {
+        if( j == Nv)
+        {
+          // points - CCW order
+          var p = [
+            i * (Nv + 1) + j,
+            (i + 1) * (Nv + 1) + j,
+            (i + 1) * (Nv + 1) + j + 1,
+            i * (Nv + 1) + j + 1
+          ];
+
+          indices.push( p[0], p[1], p[2] );
+          indices.push( p[2], p[3], p[0] );
+        }
+        else
+        {
+          // points - CCW order
+          var p = [
+            i * (Nv + 1) + j,
+            (i + 1) * (Nv + 1) + j,
+            (i + 1) * (Nv + 1) + j + 1,
+            i * (Nv + 1) + j + 1
+          ];
+
+          indices.push( p[0], p[1], p[2] );
+          indices.push( p[2], p[3], p[0] );
+        }
+      }
+    }
+  }
+
+  return shape;
+}
+
 // generate icosphere based on http://blog.andreaskahler.com/2009/06/creating-icosphere-mesh-in-code.html
 function generateIcosphere( params )
 {
@@ -672,8 +764,13 @@ function generateIcosphere( params )
     normals.push(vertices[i][0], vertices[i][1], vertices[i][2]); // already normalized
     coords.push(
       (Math.PI+Math.atan2(vertices[i][0], vertices[i][2])) / pi2,
-      (Math.PI+Math.atan2(vertices[i][1], vertices[i][2])) / pi2,
-     ); // angle based texture coordinates
+      (Math.PI+Math.atan2(vertices[i][0], vertices[i][1])) / pi2,
+     ); // angle based texture coordinates (bit inaccurate )
+
+    // not better.. probably based on seed or uv interpolation at wrap around when scale not 1 so instead use for now an uv sphere
+    //  alternative would be to find and fix the warped faces at those transition points
+    //  Math.atan2(vertices[i][2], vertices[i][0]) / pi2,
+    // 0.5 + Math.asin(vertices[i][1]) / Math.PI,
 
     // coloration
     // looks also ok (front facing hue change)
@@ -1285,13 +1382,13 @@ function initContext(id)
         if (shape.params.mat.diffuseTextureUnit && shape.params.mat.diffuseTextureLoaded )
         {
           gl.activeTexture(gl.TEXTURE0 + shape.params.mat.diffuseTextureUnit);
-    		  gl.bindTexture(gl.TEXTURE_2D, shape.params.mat.diffuseTextureLoaded);
+          gl.bindTexture(gl.TEXTURE_2D, shape.params.mat.diffuseTextureLoaded);
           gl.uniform1i(context.u_materialDiffuseTexture, shape.params.mat.diffuseTextureUnit);
         }
         else if (defaultTexture)
         {
           gl.activeTexture(gl.TEXTURE0 + defaultTexture.unit);
-    		  gl.bindTexture(gl.TEXTURE_2D, defaultTexture);
+          gl.bindTexture(gl.TEXTURE_2D, defaultTexture);
           gl.uniform1i(context.u_materialDiffuseTexture, defaultTexture.unit);
         }
 
@@ -1472,14 +1569,14 @@ function initContext(id)
     var sscale = [0.1, 0.1, 0.1];
     var sphere = createSceneObject({
       name: 'sphere',
-      generator: generateIcosphere,
+      generator: generateUVsphere,
       posOrigin: [0, 0.0, 0.0],
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
-      N: 3,
+      N: 100,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({diffuse:[1.,1.,0.],outline: true, diffuseTexture: "uv_test.png", textureScale: 2.0}), // yellow
+      mat: createPhongMaterial({diffuse:[1.,1.,0.], outline: true, diffuseTexture: "uv_test.png", textureScale: 2.0}), // yellow
     });
     /*
     var ui = gui.addFolder('Icosphere - 5');
