@@ -8,7 +8,7 @@
 Extensions not in task, but added anyways:
 * Non-uniform texture coordinate scaling as bonus for easier tiling textures
 * Adjusted phong parameters for the concrete materials (no specular/shininess)
-* Texture coords for spheres (Tested various methods/sources to fix texture coordinate generation for sphere - to fix warp issue at weld)
+* Texture coords for grid and spheres (Tested various methods/sources to fix texture coordinate generation for sphere - to fix warp issue at weld)
 
 Use controls at top to change parameters.
 
