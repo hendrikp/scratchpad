@@ -5,6 +5,11 @@
 # GVT Task 9
 [Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt9.md)
 
+Extensions not in task, but added anyways:
+* Non-uniform texture coordinate scaling as bonus for easier tiling textures
+* Adjusted phong parameters for the concrete materials (no specular/shininess)
+* Texture coords for spheres (Tested various methods/sources to fix texture coordinate generation for sphere - to fix warp issue at weld)
+
 Use controls at top to change parameters.
 
 Render-Styles (use control `renderStyle`)
@@ -31,7 +36,7 @@ Scene Keybinds (or use control `lightAngle`)
 
 Texture sources:
 * `uv_test` texture checker pattern selfcreated
-* `tile_seamless` photo made tileable with with autofill and offsetting in image editor (tutorial https://www.youtube.com/watch?v=FR3Z0zr1RaY)
+* `concrete` own photo source cropped and then made tileable with with autofill and offsetting in image editor (following tutorial https://www.youtube.com/watch?v=FR3Z0zr1RaY)
 * `loading` 1x1 red pixel placeholder procedural ;)
 
 ## WebGL Texturing
@@ -88,7 +93,7 @@ struct PhongMaterial
   float shininess;
   bool outline; // task8 ext cartoon
   sampler2D diffuseTexture; // task9
-  float textureScale;
+  vec2 textureScale;
 };
 uniform PhongMaterial material;
 
@@ -262,7 +267,7 @@ void main()
   {
     // textured (task 9) + phong
     vec3 diffuse = material.diffuse;
-    if (material.textureScale > 0.0)
+    if (material.textureScale[0] > 0.0)
     {
       diffuse = texture2D( material.diffuseTexture, vTexPosition * material.textureScale ).xyz;
     }
@@ -1050,7 +1055,7 @@ function createPhongMaterial(material)
   // Load textures
   if (material.diffuseTexture)
   {
-    material.textureScale = material.textureScale || 1.0;
+    material.textureScale = material.textureScale || [1.0, 1.0];
 
     material.diffuseTextureImage = undefined;
     material.diffuseTextureLoaded = undefined;
@@ -1060,7 +1065,7 @@ function createPhongMaterial(material)
   else
   {
     // shaders knows texture scale <= 0.0 means no texture
-    material.textureScale = material.textureScale || -1.0;
+    material.textureScale = material.textureScale || [-1.0, -1.0];
   }
 
   return material;
@@ -1464,7 +1469,7 @@ function initContext(id)
           gl.uniform1i(context.u_materialDiffuseTexture, defaultTexture.unit);
         }
 
-        gl.uniform1f( context.u_materialTextureScale, shape.params.mat.textureScale);
+        gl.uniform2fv( context.u_materialTextureScale, shape.params.mat.textureScale);
       }
 
       // ui options for drawing
@@ -1565,7 +1570,7 @@ function initContext(id)
       N: 50,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial( {specular: [ 0.0, 0.0, 0.0 ], shininess: 0.0001, diffuseTexture: "concrete.jpg", textureScale: 6.0 }  ),
+      mat: createPhongMaterial( {specular: [ 0.0, 0.0, 0.0 ], shininess: 0.0001, diffuseTexture: "concrete.jpg", textureScale: [6.0, 6.0] }  ),
      // mat: createPhongMaterial( {diffuseTexture: "uv_test.png", textureScale: 5.0 }  ),
     });
 
@@ -1590,7 +1595,7 @@ function initContext(id)
       Nu: 50, Nv: 40,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({outline: true, diffuseTexture: "uv_test.png", textureScale: 2.0}),
+      mat: createPhongMaterial({outline: true, diffuseTexture: "uv_test.png", textureScale: [8.0, 1.0]}),
     });
     /*
     var ui = gui.addFolder('Torus - 4.1+2');
@@ -1649,7 +1654,7 @@ function initContext(id)
       N: 36,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({diffuse:[1.,1.,0.], outline: true, diffuseTexture: "uv_test.png", textureScale: 2.0}), // yellow
+      mat: createPhongMaterial({diffuse:[1.,1.,0.], outline: true, diffuseTexture: "uv_test.png", textureScale: [2.0, 2.0]}), // yellow
     });
     /*
     var ui = gui.addFolder('Icosphere - 5');
@@ -1664,7 +1669,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({diffuse:[0.,1.,0.], specular: [ 0.0, 0.0, 0.0 ], shininess: 0.0001, outline: true, diffuseTexture: "concrete.jpg", textureScale: 2.0}), // green
+      mat: createPhongMaterial({diffuse:[0.,1.,0.], specular: [ 0.0, 0.0, 0.0 ], shininess: 0.0001, outline: true, diffuseTexture: "concrete.jpg", textureScale: [2.0, 2.0]}), // green
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
@@ -1709,7 +1714,7 @@ function initContext(id)
       scale: [1.25, 0.7, 1.0],
       rotate: [0, 0 , 0.0],
       drawLines: false,
-      mat: createPhongMaterial({outline: true}),
+      mat: createPhongMaterial({outline: true, specular: [ 0.0, 0.0, 0.0 ], shininess: 0.0001, diffuseTexture: "concrete.jpg", textureScale: [16.0, 2.0]}),
     });
 
     // reset camera gui
