@@ -653,6 +653,7 @@ function generateUVsphere2( params )
   var coords = [];
 
   var pi2 = 2 * Math.PI;
+  var hpi = 0.5 * Math.PI;
 
   var sectorCount = N;
   var stackCount = N;
@@ -669,10 +670,10 @@ function generateUVsphere2( params )
   var k2 = 0;
   for (var i=0; i<=stackCount; i++)
   {
-    k1 = i * (Nv + 1);
-    k2 = k1 + Nv + 1;
+    k1 = i * (sectorCount + 1);
+    k2 = k1 + sectorCount + 1;
 
-    stackAngle = Math.PI * 0.5 - i * stackStep; // starting from pi/2 to -pi/2
+    stackAngle = hpi - i * stackStep; // starting from pi/2 to -pi/2
     var xy = Math.cos(stackAngle);
     var z = Math.sin(stackAngle);
 
