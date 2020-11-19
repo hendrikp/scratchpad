@@ -1044,7 +1044,7 @@ function createPhongMaterial(material)
   material.ambient = material.ambient || [ 0.3, 0.3, 0.3 ];
   material.diffuse = material.diffuse || [ 0.6, 0.6, 0.6 ];
   material.specular = material.specular || [ 0.8, 0.8, 0.8 ];
-  material.shininess = material.shininess || 10.;
+  material.shininess = material.shininess === undefined ? 10.0 : material.shininess;
   material.outline = material.outline === undefined ? false : material.outline;
 
   // Load textures
@@ -1565,7 +1565,7 @@ function initContext(id)
       N: 50,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial( {specular: [ 0.0, 0.0, 0.0 ], shininess: 0, diffuseTexture: "concrete.jpg", textureScale: 6.0 }  ),
+      mat: createPhongMaterial( {specular: [ 0.0, 0.0, 0.0 ], shininess: 0.0001, diffuseTexture: "concrete.jpg", textureScale: 6.0 }  ),
      // mat: createPhongMaterial( {diffuseTexture: "uv_test.png", textureScale: 5.0 }  ),
     });
 
@@ -1664,7 +1664,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({diffuse:[0.,1.,0.], specular: [ 0.0, 0.0, 0.0 ], shininess: 0, outline: true, diffuseTexture: "concrete.jpg", textureScale: 2.0}), // green
+      mat: createPhongMaterial({diffuse:[0.,1.,0.], specular: [ 0.0, 0.0, 0.0 ], shininess: 0.0001, outline: true, diffuseTexture: "concrete.jpg", textureScale: 2.0}), // green
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
