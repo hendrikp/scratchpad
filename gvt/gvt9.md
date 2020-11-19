@@ -720,7 +720,8 @@ function generateUVsphere2( params )
             indices.push(k1 + 1);
             indices.push(k2);
             indices.push(k2 + 1);
-        }
+        }t
+      }
     }
   }
 
