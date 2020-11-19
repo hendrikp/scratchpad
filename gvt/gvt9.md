@@ -617,34 +617,18 @@ function generateUVsphere( params )
       colors.push(c[0], c[1], c[2], 1);
 
       // generate triangles
-      if(i < Nu && j <= Nv)
+      if(i < Nu && j < Nv)
       {
-        if( j == Nv)
-        {
-          // points - CCW order
-          var p = [
-            i * (Nv + 1) + j,
-            (i + 1) * (Nv + 1) + j,
-            (i + 1) * (Nv + 1) + j + 1,
-            i * (Nv + 1) + j + 1
-          ];
+        // points - CCW order
+        var p = [
+          i * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j,
+          (i + 1) * (Nv + 1) + j + 1,
+          i * (Nv + 1) + j + 1
+        ];
 
-          indices.push( p[0], p[1], p[2] );
-          indices.push( p[2], p[3], p[0] );
-        }
-        else
-        {
-          // points - CCW order
-          var p = [
-            i * (Nv + 1) + j,
-            (i + 1) * (Nv + 1) + j,
-            (i + 1) * (Nv + 1) + j + 1,
-            i * (Nv + 1) + j + 1
-          ];
-
-          indices.push( p[0], p[1], p[2] );
-          indices.push( p[2], p[3], p[0] );
-        }
+        indices.push( p[0], p[1], p[2] );
+        indices.push( p[2], p[3], p[0] );
       }
     }
   }
@@ -1573,10 +1557,10 @@ function initContext(id)
       posOrigin: [0, 0.0, 0.0],
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
-      N: 100,
+      N: 36,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({diffuse:[1.,1.,0.], outline: true, diffuseTexture: "uv_test.png", textureScale: 2.0}), // yellow
+      mat: createPhongMaterial({diffuse:[1.,1.,0.], outline: true}), // yellow
     });
     /*
     var ui = gui.addFolder('Icosphere - 5');
