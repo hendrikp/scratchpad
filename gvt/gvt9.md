@@ -3,7 +3,7 @@
 <script type="text/javascript" src="dat.gui.min.js"></script>
 
 # GVT Task 9
-[Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt8.md)
+[Sourcecode for Task](https://raw.githubusercontent.com/hendrikp/scratchpad/gh-pages/gvt/gvt9.md)
 
 Use controls at top to change parameters.
 
@@ -1477,7 +1477,8 @@ function initContext(id)
       N: 50,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial( {diffuseTexture: "uv_test.png", textureScale: 5.0 }  ),
+      mat: createPhongMaterial( {diffuseTexture: "concrete.jpg", textureScale: 6.0 }  ),
+     // mat: createPhongMaterial( {diffuseTexture: "uv_test.png", textureScale: 5.0 }  ),
     });
 
     var ui = gui.addFolder('Scene Grid');
