@@ -677,9 +677,8 @@ function generateUVsphere2( params )
     var xy = Math.cos(stackAngle);
     var z = Math.sin(stackAngle);
 
-    for (var j=0; j<=sectorCount; j++)
+    for (var j=0; j<=sectorCount; j++, k1++, k2++)
     {
-      ++k1; ++k2;
       sectorAngle = j * sectorStep;
 
       var p = vec3.fromValues(
@@ -690,15 +689,15 @@ function generateUVsphere2( params )
       vec3.normalize(p, p);
 
       positions.push( p[0], p[1], p[2] );
-
+      /*
       coords.push(
         Math.atan2(p[2], p[0]) / pi2 + 0.5,
         0.5 +Math.asin(p[1]) / Math.PI
-      );
-      //coords.push(j/sectorCount, i/stackCount);
+      );*/
+      coords.push(j/sectorCount, i/stackCount);
 
-      // same as pos.. but flipped
-      normals.push( -p[0], -p[1], -p[2] );
+      // same as pos
+      normals.push( p[0], p[1], p[2] );
 
       var c = hsl2rgb(j/sectorCount, 0.5, 0.5);
       colors.push(c[0], c[1], c[2], 1);
@@ -710,18 +709,14 @@ function generateUVsphere2( params )
         // k1 => k2 => k1+1
         if(i != 0)
         {
-            indices.push(k1);
-            indices.push(k2);
-            indices.push(k1 + 1);
+          indices.push(k1, k2, k1+1);
         }
 
         // k1+1 => k2 => k2+1
-        if(j != (stackCount-1))
+        if(i != (stackCount-1))
         {
-            indices.push(k1 + 1);
-            indices.push(k2);
-            indices.push(k2 + 1);
-        }t
+          indices.push(k1 + 1, k2, k2+1);
+        }
       }
     }
   }
@@ -1570,7 +1565,7 @@ function initContext(id)
       N: 50,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial( {diffuseTexture: "concrete.jpg", textureScale: 6.0 }  ),
+      mat: createPhongMaterial( {specular: [ 0.0, 0.0, 0.0 ], shininess: 0, diffuseTexture: "concrete.jpg", textureScale: 6.0 }  ),
      // mat: createPhongMaterial( {diffuseTexture: "uv_test.png", textureScale: 5.0 }  ),
     });
 
@@ -1643,7 +1638,7 @@ function initContext(id)
     ui.add(wspiral.params, "drawLines").onChange( requestFrame );
     */
 
-    // 5 - icosphere
+    // sphere (updated to uvsphere2 for better texture coords for task 9 texturing)
     var sscale = [0.1, 0.1, 0.1];
     var sphere = createSceneObject({
       name: 'sphere',
@@ -1654,7 +1649,7 @@ function initContext(id)
       N: 36,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial({diffuse:[1.,1.,0.], outline: true}), // yellow
+      mat: createPhongMaterial({diffuse:[1.,1.,0.], outline: true, diffuseTexture: "uv_test.png", textureScale: 2.0}), // yellow
     });
     /*
     var ui = gui.addFolder('Icosphere - 5');
@@ -1669,7 +1664,7 @@ function initContext(id)
       scale: sscale,
       rotate: [0.0, 0.0, 0.0],
       drawLines: false,
-      mat: createPhongMaterial({diffuse:[0.,1.,0.],outline: true,}), // green
+      mat: createPhongMaterial({diffuse:[0.,1.,0.], specular: [ 0.0, 0.0, 0.0 ], shininess: 0, outline: true, diffuseTexture: "concrete.jpg", textureScale: 2.0}), // green
     });
     var sphere3 = duplicateSceneObject(sphere, {
       name: 'sphere3',
