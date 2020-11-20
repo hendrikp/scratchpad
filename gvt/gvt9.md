@@ -18,7 +18,7 @@ Render-Styles (use control `renderStyle`)
 * `2` - Normals
 * `3` - Phong-Lighting
 * `4` - Cartoon Shading
-* `5` - **Textures + Phong-Lighting (Task 9)**
+* `5` - **Textures + Phong-Lighting (Task 9) + Procedural Texture (Task 9 Extension)**
 
 Keybinds (Standard FPS/Fly Controls)
 * Hold `Shift` to move faster
@@ -38,6 +38,9 @@ Texture sources:
 * `uv_test` texture checker pattern selfcreated
 * `concrete` own photo source cropped and then made tileable with with autofill and offsetting in image editor (following tutorial https://www.youtube.com/watch?v=FR3Z0zr1RaY)
 * `loading` 1x1 red pixel placeholder procedural ;)
+* `procedural_donut` donut style torus procedural texture (task 9 extension)
+  * noise function from internet https://www.shadertoy.com/view/4dS3Wd
+  * Donut algorithm with pink frosting, bread and chocolate/sugar sprinkles - selfcreated
 
 ## WebGL Texturing
 <canvas id="wgl" width="768" height="768" style="outline: grey 2px solid;"></canvas>
@@ -94,6 +97,7 @@ struct PhongMaterial
   bool outline; // task8 ext cartoon
   sampler2D diffuseTexture; // task9
   vec2 textureScale;
+  int textureProcedural; // task9 ext: proecdural texture type
 };
 uniform PhongMaterial material;
 
@@ -188,6 +192,85 @@ vec3 HSLtoRGB(in vec3 hsl)
     return (rgb - 0.5) * c + hsl.z;
 }
 
+// Noise function - used through Task 9 procedural Texture extension.
+//	<https://www.shadertoy.com/view/4dS3Wd>
+//	By Morgan McGuire @morgan3d, http://graphicscodex.com
+//
+float hash(float n) { return fract(sin(n) * 1e4); }
+float hash(vec2 p) { return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x)))); }
+float noise(float x)
+{
+	float i = floor(x);
+	float f = fract(x);
+	float u = f * f * (3.0 - 2.0 * f);
+	return mix(hash(i), hash(i + 1.0), u);
+}
+float noise(vec2 x)
+{
+	vec2 i = floor(x);
+	vec2 f = fract(x);
+
+	// Four corners in 2D of a tile
+	float a = hash(i);
+	float b = hash(i + vec2(1.0, 0.0));
+	float c = hash(i + vec2(0.0, 1.0));
+	float d = hash(i + vec2(1.0, 1.0));
+
+	// Simple 2D lerp using smoothstep envelope between the values.
+	// return vec3(mix(mix(a, b, smoothstep(0.0, 1.0, f.x)),
+	//			mix(c, d, smoothstep(0.0, 1.0, f.x)),
+	//			smoothstep(0.0, 1.0, f.y)));
+
+	// Same code, with the clamps in smoothstep and common subexpressions
+	// optimized away.
+	vec2 u = f * f * (3.0 - 2.0 * f);
+	return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+
+// Task 9 Extension
+vec3 texDonut(vec2 tPos)
+{
+  const float pi = 3.14159265358;
+
+  tPos = fract(tPos); // wrap around range 0-1 (tiling texture)
+
+  // bread - base color
+  vec3 diffuse = vec3(0.890, 0.709, 0.407);
+
+  // pink edge frosting
+  float frostingCurve = sin(tPos.x*pi) *0.1;
+  if ( tPos.y-0.1 < frostingCurve )
+  {
+    diffuse = vec3(0.890, 0.407, 0.725);
+  }
+  else if ( tPos.y+0.1 > 1.0-frostingCurve) 
+  {
+    // other side
+    diffuse = vec3(0.890, 0.407, 0.725);
+  }
+  else
+  {
+    // sample noise for some nice sprinkles
+    vec2 sprinklesPos = tPos*25.0;
+    sprinklesPos.y *= 2.0;
+    float nv = noise(sprinklesPos);
+
+    // brown chocolate sprinkles through noise function above
+    if( nv < 0.13)
+    {
+      diffuse = vec3(0.309, 0.160, 0.109);
+    }
+
+    // add some blue sugar spinkles too
+    if( nv > 0.92)
+    {
+      diffuse = vec3(0.074, 0.431, 0.803);
+    }
+  }
+
+  return diffuse;
+}
+
 const vec3 outlineColor = vec3(0.1,0.1,0.3); // for toon shader slightly blue black
 
 void main()
@@ -269,7 +352,16 @@ void main()
     vec3 diffuse = material.diffuse;
     if (material.textureScale[0] > 0.0)
     {
-      diffuse = texture2D( material.diffuseTexture, vTexPosition * material.textureScale ).xyz;
+      vec2 tPos = vTexPosition * material.textureScale;
+      if (material.textureProcedural == 1)
+      {
+        diffuse = texDonut(tPos);
+      }
+      else
+      {
+        diffuse = texture2D( material.diffuseTexture, tPos).xyz;
+      }
+
     }
 
     gl_FragColor = vec4( phong(diffuse, vPosition.xyz, normalize(vNormal), normalize(-vPosition.xyz)), 1.0);
@@ -1051,6 +1143,7 @@ function createPhongMaterial(material)
   material.specular = material.specular || [ 0.8, 0.8, 0.8 ];
   material.shininess = material.shininess === undefined ? 10.0 : material.shininess;
   material.outline = material.outline === undefined ? false : material.outline;
+  material.textureProcedural = material.textureProcedural || 0;
 
   // Load textures
   if (material.diffuseTexture)
@@ -1061,6 +1154,10 @@ function createPhongMaterial(material)
     material.diffuseTextureLoaded = undefined;
     material.diffuseTextureUnit = undefined;
     loadImage(material, material.diffuseTexture);
+  }
+  else if (material.textureProcedural > 0)
+  {
+    material.textureScale = material.textureScale || [1.0, 1.0];
   }
   else
   {
@@ -1177,6 +1274,9 @@ function initContext(id)
     // task 9
     context.u_materialDiffuseTexture = gl.getUniformLocation(program, "material.diffuseTexture");
     context.u_materialTextureScale = gl.getUniformLocation(program, "material.textureScale");
+
+    // task 9 extension
+    context.u_materialTextureProcedural = gl.getUniformLocation(program, "material.textureProcedural");
 
     // projection
     var u_projection = gl.getUniformLocation(program, "projection");
@@ -1470,6 +1570,7 @@ function initContext(id)
         }
 
         gl.uniform2fv( context.u_materialTextureScale, shape.params.mat.textureScale);
+        gl.uniform1i( context.u_materialTextureProcedural, shape.params.mat.textureProcedural);
       }
 
       // ui options for drawing
@@ -1570,7 +1671,7 @@ function initContext(id)
       N: 50,
       drawLines: false,
       draw: drawElements,
-      mat: createPhongMaterial( {specular: [ 0.0, 0.0, 0.0 ], shininess: 0.0001, diffuseTexture: "concrete.jpg", textureScale: [6.0, 6.0] }  ),
+      mat: createPhongMaterial( {specular: [ 0.0, 0.0, 0.0 ], shininess: 0.1, diffuseTexture: "concrete.jpg", textureScale: [6.0, 6.0] }  ),
      // mat: createPhongMaterial( {diffuseTexture: "uv_test.png", textureScale: 5.0 }  ),
     });
 
@@ -1643,7 +1744,7 @@ function initContext(id)
     ui.add(wspiral.params, "drawLines").onChange( requestFrame );
     */
 
-    // sphere (updated to uvsphere2 for better texture coords for task 9 texturing)
+    // sphere (updated to uvsphere2 for better texture coords for task9 texturing)
     var sscale = [0.1, 0.1, 0.1];
     var sphere = createSceneObject({
       name: 'sphere',
@@ -1749,6 +1850,20 @@ function initContext(id)
       drawLines: true,
       draw: drawElements,
       mat: createPhongMaterial({diffuse:[1.,1.,1],outline: false,}), // white
+    });
+
+    // task9 extension (procedural texture)
+    var donut = createSceneObject({
+      name: 'donut',
+      generator: generateTorus,
+      posOrigin: [0, 0.0, -1.4],
+      scale: [0.5, 0.5, 0.5],
+      rotate: [Math.PI*0.25, Math.PI*0.25, 0],
+      r: 0.35, R: 1.0,
+      Nu: 50, Nv: 40,
+      drawLines: false,
+      draw: drawElements,
+      mat: createPhongMaterial({outline: true, textureProcedural: 1, textureScale: [8.0, 1.0], shininess: 0.000001, specular: [0.0,0.0,0.0]}),
     });
 
     // based on https://de.wikipedia.org/wiki/Lemniskate_von_Bernoulli
